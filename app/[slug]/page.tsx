@@ -1,10 +1,14 @@
 "use client";
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import SignCanvas, { SignResult } from "@/components/SignCanvas";
+import Slideshow from "@/components/Slideshow";
 import { useEvent } from "@/lib/useEvent";
 import { fileUrl, PhotoRow } from "@/lib/supabase";
 
 const RECENT_MS = 15 * 60 * 1000;
+const IDLE_MS = 60 * 1000;        // booth drifts into the slideshow after a minute untouched
+const HOLD_TO_UNLOCK_MS = 2000;   // long-press on the logo to leave kiosk mode
+const KIOSK_PIN = "0000";         // crew code to leave kiosk mode
 
 export default function BoothPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -12,6 +16,25 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
   const [current, setCurrent] = useState<PhotoRow | null>(null);
   const [thanks, setThanks] = useState<string | null>(null);
   const [kiosk, setKiosk] = useState(false);
+  const [idle, setIdle] = useState(false);
+  const [unlock, setUnlock] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinMsg, setPinMsg] = useState<string | null>(null);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // kiosk state survives reloads
+  useEffect(() => { try { setKiosk(localStorage.getItem("kiosk:" + slug) === "1"); } catch {} }, [slug]);
+  const setKioskPersist = (on: boolean) => { setKiosk(on); try { localStorage.setItem("kiosk:" + slug, on ? "1" : "0"); } catch {} };
+
+  // idle → slideshow (only when nothing is open)
+  const touch = () => {
+    setIdle(false);
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => { if (!current && !thanks && !unlock) setIdle(true); }, IDLE_MS);
+  };
+  useEffect(() => { touch(); return () => { if (idleTimer.current) clearTimeout(idleTimer.current); }; // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, thanks, unlock]);
 
   const { recent, earlier } = useMemo(() => {
     const cutoff = Date.now() - RECENT_MS;
@@ -34,11 +57,12 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
     setTimeout(() => setThanks(null), qr ? 9000 : 2600);
   };
 
-  const toggleKiosk = () => {
-    const next = !kiosk; setKiosk(next);
-    const el: any = document.documentElement;
-    if (next && el.requestFullscreen) el.requestFullscreen().catch(() => {});
-    if (!next && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  // long-press the logo in kiosk mode to get the PIN prompt
+  const holdStart = () => { if (!kiosk) return; holdTimer.current = setTimeout(() => { setUnlock(true); setPin(""); setPinMsg(null); }, HOLD_TO_UNLOCK_MS); };
+  const holdEnd = () => { if (holdTimer.current) clearTimeout(holdTimer.current); };
+  const tryUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin === KIOSK_PIN) { setKioskPersist(false); setUnlock(false); } else setPinMsg("Wrong PIN");
   };
 
   if (status === "missing") return <div className="empty"><h3>No event at this link</h3><p>Check the event slug with your editor.</p></div>;
@@ -51,8 +75,10 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
     </button>
   );
 
+  const logoProps = { onPointerDown: holdStart, onPointerUp: holdEnd, onPointerLeave: holdEnd, onPointerCancel: holdEnd, onContextMenu: (e: React.MouseEvent) => e.preventDefault() };
+
   return (
-    <div className="booth">
+    <div className="booth" onPointerDown={touch}>
       {!kiosk && (
         <div className="bar">
           <div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge by Redefined Weddings" /><span className="brand-sub">Signature Book</span></div>
@@ -60,7 +86,7 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
         </div>
       )}
       <div className="booth-head">
-        {kiosk && <img className="booth-logo" src="/logo.png" alt="Photo Lounge by Redefined Weddings" />}
+        {kiosk && <img className="booth-logo" src="/logo.png" alt="Photo Lounge by Redefined Weddings" draggable={false} {...logoProps} />}
         <h1>Find Your Portrait</h1>
         <p>Tap the portrait you just took, then write a note for the couple.</p>
         <div className="rule" />
@@ -83,7 +109,7 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
           </>)}
         </div>
       </div>
-      <button className="kiosk-btn" onClick={toggleKiosk}>{kiosk ? "Exit kiosk" : "Kiosk mode"}</button>
+      {!kiosk && <button className="kiosk-btn" onClick={() => setKioskPersist(true)}>Lock kiosk</button>}
 
       {current && (
         <SignCanvas src={fileUrl(current.original_path)!} initialName={current.guest_name || ""} onClose={() => setCurrent(null)} onSave={onSave} />
@@ -96,6 +122,23 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
             <p>Your note is in the couple's book.</p>
             {qr && (<div className="qr-block"><img src={qr} alt="QR code for the online gallery" /><div className="eyebrow">Scan to pre-register for the online gallery</div></div>)}
           </div>
+        </div>
+      )}
+
+      {idle && !current && !thanks && (
+        <Slideshow photos={photos} title={event?.title} hint="Tap anywhere to find your portrait" onInteract={() => setIdle(false)} />
+      )}
+
+      {unlock && (
+        <div className="thanks" style={{ zIndex: 50 }}>
+          <form className="pin-gate" onSubmit={tryUnlock} style={{ margin: 0 }}>
+            <div className="eyebrow">Photo Lounge crew</div>
+            <h2>Crew code to unlock</h2>
+            <input autoFocus value={pin} onChange={(e) => setPin(e.target.value)} type="password" inputMode="numeric" autoComplete="off" placeholder="••••" />
+            <button className="primary" type="submit">Unlock kiosk</button>
+            <button className="tbtn" type="button" onClick={() => setUnlock(false)}>Cancel</button>
+            {pinMsg && <div className="stat">{pinMsg}</div>}
+          </form>
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ Three screens, one link per event:
 | `/{slug}` | Guests (iPad, no login) | "Find Your Portrait" grid → sign → thank-you with gallery QR |
 | `/{slug}/upload` | Editor (PIN) | Drop zone for exports, QR code upload, live counts |
 | `/{slug}/gallery?key={gallery_token}` | Couple | Signed set, lightbox, one-click ZIP (signed + original + ink layer) |
+| `/{slug}/wall` | TV / second screen | Live slideshow of signed portraits, newest first |
 | `/admin` | Team (ADMIN_PIN) | Create and manage events, QR codes, links, downloads, deletion |
 
 Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtime). No auth system: guests are anonymous, the editor uses a per-event PIN, the couple's link carries a token.
@@ -37,7 +38,9 @@ Open `/admin`, enter the admin PIN, type the couple's names and the date, click 
 
 ## 4. Night of
 
-**iPad**: open `https://book.photoloungehawaii.com/{slug}` in Safari → Share → Add to Home Screen → open from the icon → Settings → Accessibility → Guided Access, then triple-click the top button to lock it. Tap "Kiosk mode" to hide the header.
+**iPad**: open `https://book.photoloungehawaii.com/{slug}` in Safari → Share → Add to Home Screen → open from the icon → Settings → Accessibility → Guided Access, then triple-click the top button to lock it. Tap **Lock kiosk** to hide the header and the button; to leave, hold the logo for 2 seconds and enter `0000`. After a minute untouched the booth drifts into the signed-portrait slideshow; any tap brings the grid back.
+
+**Wall**: open `/{slug}/wall` on a TV or second iPad for a live crossfading slideshow of signed portraits.
 
 **Laptop**: Lightroom export preset → JPEG, 2500px long edge, quality 85, no subfolder, destination `~/Pictures/Booth Export`. Then in this project folder:
 

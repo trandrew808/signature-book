@@ -10,7 +10,7 @@
 .dark{ --bg:#1C1A19; --bg2:#262321; --fg:#F1EAE5; --fg2:#A89E99; --line:#3A3532; --card:#262321; color-scheme:dark }
 
 *{box-sizing:border-box}
-html,body{height:100%;margin:0}
+html,body{height:100%;margin:0;overscroll-behavior:none}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-weight:300;font-size:16px;line-height:1.5;-webkit-user-select:none;user-select:none;-webkit-text-size-adjust:100%}
 input,textarea{-webkit-user-select:text;user-select:text}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -121,3 +121,20 @@ h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;l
 .lb-bar .tbtn{color:#F1EAE5;border-color:#3A3532}
 
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* slideshow */
+.show{position:fixed;inset:0;z-index:30;background:#141211;color:#F1EAE5;display:grid;place-items:center;overflow:hidden}
+.show-fig{margin:0;display:grid;justify-items:center;gap:18px;max-width:min(92vw,1100px);max-height:100%;padding:24px;animation:showin .7s ease;transition:opacity .6s}
+.show-fig.out{opacity:0}
+.show-fig img{max-width:100%;max-height:72vh;object-fit:contain;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.show-fig figcaption{font-family:var(--display);font-size:clamp(22px,3vw,34px);font-weight:400;letter-spacing:.01em}
+.show-empty{text-align:center;padding:24px;max-width:40ch}
+.show-empty img{height:40px;filter:invert(1) brightness(1.2);opacity:.9;margin-bottom:22px}
+.show-empty h2{font-size:clamp(30px,5vw,48px);font-weight:400}
+.show-empty p{color:#A89E99}
+.show-hint{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#A89E99}
+.show-dots{position:fixed;top:calc(18px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.show-dots i{width:6px;height:6px;border-radius:50%;background:#3A3532}
+.show-dots i.on{background:#B98A88}
+@keyframes showin{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.show-fig{animation:none}}
