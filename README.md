@@ -30,7 +30,7 @@ Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtim
 2. Environment variables (Vercel → Settings → Environment Variables):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_KEY` (server only)
+   - `SUPABASE_SERVICE_KEY` (server only) — or connect the Supabase resource under Vercel → Storage, which injects `SUPABASE_SERVICE_ROLE_KEY` and the two public vars automatically
 3. Deploy. Suggested domain: `book.photoloungehawaii.com`.
 
 Local dev: copy `.env.example` to `.env.local`, fill it in, `npm install`, `npm run dev`.
