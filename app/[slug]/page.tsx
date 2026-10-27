@@ -60,7 +60,7 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
         </div>
       )}
       <div className="booth-head">
-        <img className="booth-logo" src="/logo.png" alt="Photo Lounge by Redefined Weddings" />
+        {kiosk && <img className="booth-logo" src="/logo.png" alt="Photo Lounge by Redefined Weddings" />}
         <h1>Find Your Portrait</h1>
         <p>Tap the portrait you just took, then write a note for the couple.</p>
         <div className="rule" />
