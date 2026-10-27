@@ -32,7 +32,9 @@ export function supabaseBrowser(): SupabaseClient {
 
 /** Server client with the service key. Only import from API routes. */
 export function supabaseAdmin(): SupabaseClient {
-  return createClient(url!, process.env.SUPABASE_SERVICE_KEY!, {
+  // Vercel's Supabase marketplace integration names it SUPABASE_SERVICE_ROLE_KEY.
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return createClient(url!, key!, {
     auth: { persistSession: false },
   });
 }
