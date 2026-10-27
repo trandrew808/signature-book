@@ -114,7 +114,7 @@ export default function AdminPage() {
         <div className="right"><span className="stat">{events.length} {events.length === 1 ? "event" : "events"}</span></div></div>
       <div className="wrap" style={{ maxWidth: 1000, margin: "0 auto", width: "100%" }}>
         <h2 style={{ fontSize: 30, marginBottom: 6 }}>New event</h2>
-        <p style={{ color: "var(--fg2)", margin: "0 0 14px" }}>Couple's names and the wedding date. The links and editor PIN are generated for you.</p>
+        <p style={{ color: "var(--fg2)", margin: "0 0 14px" }}>Couple's names and the wedding date. The iPad link and editor PIN are generated for you.</p>
         <form className="row" onSubmit={create} style={{ marginTop: 0 }}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sarah & Kai" required style={{ ...inputStyle, flex: 2, minWidth: 200 }} />
           <input value={date} onChange={(e) => setDate(e.target.value)} type="date" style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
@@ -124,7 +124,7 @@ export default function AdminPage() {
         <h2 style={{ fontSize: 30, margin: "36px 0 14px" }}>Events</h2>
         <div style={{ display: "grid", gap: 14 }}>
           {events.map((ev) => {
-            const booth = `${origin}/${ev.slug}`, upload = `${origin}/${ev.slug}/upload`, gallery = `${origin}/${ev.slug}/gallery?key=${ev.gallery_token}`;
+            const booth = `${origin}/${ev.slug}`, upload = `${origin}/${ev.slug}/upload`;
             const isBusy = !!busy && busy.startsWith(ev.slug);
             return (
               <div key={ev.slug} style={{ border: "1px solid var(--line)", background: "var(--card)", padding: 16 }}>
@@ -147,7 +147,6 @@ export default function AdminPage() {
                 <div style={{ display: "grid", gap: 8, marginTop: 14, fontSize: 14 }}>
                   <Row label="iPad" value={booth} onCopy={() => copy(booth, "iPad link")} />
                   <Row label="Editor" value={`${upload}  ·  PIN ${ev.editor_pin}`} onCopy={() => copy(`${upload}\nPIN: ${ev.editor_pin}`, "Editor link and PIN")} />
-                  <Row label="Couple" value={gallery} onCopy={() => copy(gallery, "Couple's gallery link")} />
                 </div>
 
                 <div className="row" style={{ marginTop: 14, alignItems: "center" }}>
@@ -156,7 +155,6 @@ export default function AdminPage() {
                   {ev.qr_path && <button className="tbtn" disabled={isBusy} onClick={() => removeQr(ev)}>Remove QR</button>}
                   <span style={{ flex: 1 }} />
                   <button className="tbtn" onClick={() => openPreview(ev)}>View gallery</button>
-                  <a className="tbtn" href={gallery} target="_blank" rel="noreferrer">Open couple's view</a>
                   <button className="primary" disabled={isBusy || !ev.signed} onClick={() => download(ev, true)}>{isBusy && busy!.includes(":") ? "Packing " + busy!.split(":")[1] : "Download signed"}</button>
                   <button className="tbtn" disabled={isBusy || !ev.total} onClick={() => download(ev, false)}>All files</button>
                 </div>

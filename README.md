@@ -49,7 +49,7 @@ BOOTH_URL=https://book.photoloungehawaii.com BOOTH_EVENT={slug} BOOTH_PIN={pin} 
 
 Every export lands on the iPad in a few seconds. The Upload page works as a manual fallback (drag and drop) and is where the editor uploads the Pic-Time pre-registration QR.
 
-**Delivery**: send the couple `/{slug}/gallery?key={gallery_token}`. "Download all signed" gives a ZIP named `SB-001-Guest-Name-signed.jpg / -original.jpg / -ink.png`, in signing order, ready to import into Lightroom and publish to Pic-Time as a "Signature Book" scene.
+**Delivery**: in `/admin`, "Download signed" gives a ZIP named `SB-001-Guest-Name-signed.jpg / -original.jpg / -ink.png`, in signing order, ready to import into Lightroom and publish to Pic-Time as a "Signature Book" scene. (A couple's web gallery also exists at `/{slug}/gallery?key={gallery_token}` if you ever want to share one directly.)
 
 ## Storage layout
 
