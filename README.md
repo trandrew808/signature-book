@@ -9,6 +9,8 @@ Three screens, one link per event:
 | `/{slug}` | Guests (iPad, no login) | "Find Your Portrait" grid → sign → thank-you with gallery QR |
 | `/{slug}/upload` | Editor (PIN) | Drop zone for exports, QR code upload, live counts |
 | `/{slug}/gallery?key={gallery_token}` | Couple | Signed set, lightbox, one-click ZIP (signed + original + ink layer) |
+| `/admin` | Team (ADMIN_PIN) | Create and manage events, QR codes, links, downloads, deletion |
+| `/admin` | You (admin PIN) | Create events, copy the three links, delete old events |
 
 Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtime). No auth system: guests are anonymous, the editor uses a per-event PIN, the couple's link carries a token.
 
@@ -16,13 +18,7 @@ Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtim
 
 1. Create a project at supabase.com. Pick a region close to Honolulu (us-west).
 2. SQL Editor → paste `supabase/schema.sql` → Run. This creates `events`, `photos`, the public `booth` bucket, realtime and read policies.
-3. Add your first event (SQL Editor):
-   ```sql
-   insert into events (slug, title, editor_pin) values ('demo', 'Sarah & Kai', '2468');
-   select slug, gallery_token from events;
-   ```
-   Keep the `gallery_token`; it's the key in the couple's link.
-4. Project Settings → API: copy the Project URL, the `anon` key and the `service_role` key.
+3. Project Settings → API: copy the Project URL, the `anon` key and the `service_role` key.
 
 ## 2. Deploy (5 min)
 
@@ -30,12 +26,18 @@ Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtim
 2. Environment variables (Vercel → Settings → Environment Variables):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `ADMIN_PIN` — any 4+ digit PIN; unlocks `/admin`
+   - `ADMIN_PIN` — the team PIN that unlocks `/admin`
    - `SUPABASE_SERVICE_KEY` (server only) — or connect the Supabase resource under Vercel → Storage, which injects `SUPABASE_SERVICE_ROLE_KEY` and the two public vars automatically
 3. Deploy. Suggested domain: `book.photoloungehawaii.com`.
 
 Local dev: copy `.env.example` to `.env.local`, fill it in, `npm install`, `npm run dev`.
 
-## 3. Night of
+## 3. Create an event
+
+Open `/admin`, enter the admin PIN, type the couple's names and the date, click **Create event**. You get the three links (iPad, editor + PIN, couple's gallery) with copy buttons. Delete an event there too; it removes its photos and notes.
+
+## 4. Night of
 
 **iPad**: open `https://book.photoloungehawaii.com/{slug}` in Safari → Share → Add to Home Screen → open from the icon → Settings → Accessibility → Guided Access, then triple-click the top button to lock it. Tap "Kiosk mode" to hide the header.
 
