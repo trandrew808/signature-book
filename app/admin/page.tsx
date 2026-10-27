@@ -92,7 +92,15 @@ export default function AdminPage() {
       saveBlob(`${ev.slug}-${signedOnly ? "signed" : "all"}.zip`, await zip.generateAsync({ type: "blob" }));
     } catch (err: any) { toast("Download failed: " + (err?.message || "")); } finally { setBusy(null); }
   };
-  const copy = async (text: string, label: string) => { try { await navigator.clipboard.writeText(text); toast(`${label} copied`); } catch { toast("Select and copy the link manually"); } };
+  const copy = async (text: string, label: string) => {
+    try { if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); toast(`${label} copied`); return; } } catch {}
+    // Fallback for browsers that refuse the Clipboard API
+    const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+    let ok = false; try { ok = document.execCommand("copy"); } catch {}
+    ta.remove();
+    toast(ok ? `${label} copied` : "Copy blocked here. Tap the link text to select it, then copy.");
+  };
 
   if (!unlocked) {
     return (
@@ -207,7 +215,7 @@ function Row({ label, value, onCopy }: { label: string; value: string; onCopy: (
   return (
     <div style={{ display: "grid", gridTemplateColumns: "64px 1fr auto", gap: 10, alignItems: "center", minWidth: 0 }}>
       <span className="eyebrow">{label}</span>
-      <code style={{ fontSize: 13, color: "var(--fg2)", overflowWrap: "anywhere", userSelect: "text", WebkitUserSelect: "text" }}>{value}</code>
+      <code onClick={(e) => { const r = document.createRange(); r.selectNodeContents(e.currentTarget); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(r); }} style={{ fontSize: 13, color: "var(--fg2)", overflowWrap: "anywhere", userSelect: "text", WebkitUserSelect: "text", cursor: "text" }}>{value}</code>
       <button className="tbtn" onClick={onCopy}>Copy</button>
     </div>
   );
