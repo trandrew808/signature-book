@@ -29,7 +29,7 @@ Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtim
    - `ADMIN_PIN` — any 4+ digit PIN; unlocks `/admin`
    - `ADMIN_PIN` — the team PIN that unlocks `/admin`
    - `SUPABASE_SERVICE_KEY` (server only) — or connect the Supabase resource under Vercel → Storage, which injects `SUPABASE_SERVICE_ROLE_KEY` and the two public vars automatically
-3. Deploy. Suggested domain: `book.photoloungehawaii.com`.
+3. Deploy. Live at `book.photoloungehawaii.com` (CNAME at GoDaddy → Vercel). The root redirects to `/admin`.
 
 Local dev: copy `.env.example` to `.env.local`, fill it in, `npm install`, `npm run dev`.
 
