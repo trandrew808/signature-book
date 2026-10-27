@@ -55,11 +55,11 @@ Every export lands on the iPad in a few seconds. The Upload page works as a manu
 booth/
   {slug}/originals/{timestamp}-{filename}.jpg   edited export (what guests tap)
   {slug}/signed/{photo_id}-{timestamp}.jpg      flattened signed JPEG, quality 92
-  {slug}/ink/{photo_id}-{timestamp}.png         transparent ink layer, native size
+  {slug}/ink/{photo_id}-{timestamp}.png         transparent ink layer, same size as the signed file
   {slug}/qr-{timestamp}.png                     event's pre-registration QR
 ```
 
-The ink layer is kept separately so the handwriting can be re-applied to the full-resolution original for an album.
+Guests choose a frame when they sign: **Print frame** (default) adds a white border and a writing band under the photo, like an instant print, so there's always room for a note; **Photo only** writes directly on the image. The `photos.frame` column records which. The ink layer is kept separately so the handwriting can be re-applied to the full-resolution original for an album (for `print`, offset it by the 5% margin).
 
 ## Notes and next steps
 

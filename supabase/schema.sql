@@ -22,6 +22,7 @@ create table if not exists photos (
   layer_path text,                        -- transparent ink layer PNG
   guest_name text,
   signed_at timestamptz,
+  frame text,                             -- 'print' (white border + writing band) or 'none'
   created_at timestamptz default now()
 );
 create index if not exists photos_event_created on photos (event_id, created_at desc);

@@ -22,10 +22,10 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
 
   const qr = fileUrl(event?.qr_path);
 
-  const onSave = async ({ signed, layer, guest }: SignResult) => {
+  const onSave = async ({ signed, layer, guest, frame }: SignResult) => {
     if (!current) return;
     const fd = new FormData();
-    fd.append("photo_id", current.id); fd.append("guest", guest);
+    fd.append("photo_id", current.id); fd.append("guest", guest); fd.append("frame", frame);
     fd.append("signed", signed, "signed.jpg"); fd.append("layer", layer, "ink.png");
     const r = await fetch("/api/sign", { method: "POST", body: fd });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "upload failed");

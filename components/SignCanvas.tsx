@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from "react";
 
 type Pt = { x: number; y: number; p: number };
 type Stroke = { ink: string; pts: Pt[] };
+export type FrameStyle = "print" | "none";
 
 const INKS = [
-  { color: "#FFFFFF", label: "White ink" },
   { color: "#1E1C17", label: "Black ink" },
-  { color: "#E6B8B3", label: "Blush ink" },
+  { color: "#FFFFFF", label: "White ink" },
+  { color: "#B98A88", label: "Rose ink" },
 ];
 
 const widthFor = (p: number) => Math.max(1.2, 1.5 + 3.5 * p);
@@ -24,16 +25,29 @@ function drawStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], scale: nu
   }
 }
 
+/**
+ * Build the "paper": the photo alone, or an instant-print style frame with a
+ * white border and a deep band underneath for the note. Returns a canvas at
+ * native resolution; all ink coordinates are in this canvas's pixel space.
+ */
+function makeBase(img: HTMLImageElement, frame: FrameStyle): HTMLCanvasElement {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const c = document.createElement("canvas");
+  if (frame === "none") { c.width = W; c.height = H; c.getContext("2d")!.drawImage(img, 0, 0); return c; }
+  const m = Math.round(W * 0.05);              // side and top margin
+  const band = Math.round(H * 0.34);           // writing band under the photo
+  c.width = W + 2 * m; c.height = H + m + band + m;
+  const x = c.getContext("2d")!;
+  x.fillStyle = "#FBF9F6"; x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(img, m, m, W, H);
+  return c;
+}
+
 const toBlob = (c: HTMLCanvasElement, type: string, q?: number) =>
   new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("export failed"))), type, q));
 
-export type SignResult = { signed: Blob; layer: Blob; guest: string };
+export type SignResult = { signed: Blob; layer: Blob; guest: string; frame: FrameStyle };
 
-/**
- * Full-screen signing view. Loads `src`, lets the guest write with Pencil or
- * finger (points stored in image-pixel coordinates), and on save exports a
- * flattened JPEG plus a transparent PNG ink layer at the image's native size.
- */
 export default function SignCanvas({ src, initialName, onClose, onSave }:
   { src: string; initialName?: string; onClose: () => void; onSave: (r: SignResult) => Promise<void> }) {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -41,36 +55,39 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
   const photoRef = useRef<HTMLCanvasElement>(null);
   const inkRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const baseRef = useRef<HTMLCanvasElement | null>(null);
   const strokesRef = useRef<Stroke[]>([]);
   const liveRef = useRef<Stroke | null>(null);
+  const [frame, setFrame] = useState<FrameStyle>("print");
   const [ink, setInk] = useState(INKS[0].color);
   const [guest, setGuest] = useState(initialName || "");
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const flash = (t: string, ms = 2200) => { setMsg(t); setTimeout(() => setMsg(null), ms); };
 
   const redraw = () => {
-    const c = inkRef.current, img = imgRef.current; if (!c || !img) return;
+    const c = inkRef.current, base = baseRef.current; if (!c || !base) return;
     const ctx = c.getContext("2d")!; ctx.clearRect(0, 0, c.width, c.height);
-    drawStrokes(ctx, strokesRef.current, c.width / img.naturalWidth);
+    drawStrokes(ctx, strokesRef.current, c.width / base.width);
   };
 
   const fit = () => {
-    const img = imgRef.current, stage = stageRef.current, frame = frameRef.current, pc = photoRef.current, ic = inkRef.current;
-    if (!img || !stage || !frame || !pc || !ic) return;
+    const base = baseRef.current, stage = stageRef.current, fr = frameRef.current, pc = photoRef.current, ic = inkRef.current;
+    if (!base || !stage || !fr || !pc || !ic) return;
     const maxW = stage.clientWidth - 24, maxH = stage.clientHeight - 24;
-    const r = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1.5);
-    const cssW = Math.floor(img.naturalWidth * r), cssH = Math.floor(img.naturalHeight * r);
+    const r = Math.min(maxW / base.width, maxH / base.height, 1.5);
+    const cssW = Math.floor(base.width * r), cssH = Math.floor(base.height * r);
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    frame.style.width = cssW + "px"; frame.style.height = cssH + "px";
+    fr.style.width = cssW + "px"; fr.style.height = cssH + "px";
     for (const c of [pc, ic]) { c.width = Math.round(cssW * dpr); c.height = Math.round(cssH * dpr); c.style.width = cssW + "px"; c.style.height = cssH + "px"; }
-    pc.getContext("2d")!.drawImage(img, 0, 0, pc.width, pc.height);
+    pc.getContext("2d")!.drawImage(base, 0, 0, pc.width, pc.height);
     redraw();
   };
 
   useEffect(() => {
     const img = new Image(); img.crossOrigin = "anonymous";
-    img.onload = () => { imgRef.current = img; setLoaded(true); requestAnimationFrame(fit); };
+    img.onload = () => { imgRef.current = img; baseRef.current = makeBase(img, frame); setLoaded(true); requestAnimationFrame(fit); };
     img.onerror = () => setMsg("That portrait could not be loaded.");
     img.src = src;
     const onResize = () => fit();
@@ -79,19 +96,27 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
-  const toImg = (e: PointerEvent): Pt => {
-    const c = inkRef.current!, img = imgRef.current!; const r = c.getBoundingClientRect(); const k = img.naturalWidth / r.width;
+  const switchFrame = (next: FrameStyle) => {
+    if (next === frame || !imgRef.current) return;
+    if (strokesRef.current.length) flash("Frame changed, your note was cleared.");
+    strokesRef.current = []; setFrame(next);
+    setInk(next === "print" ? INKS[0].color : INKS[1].color);
+    baseRef.current = makeBase(imgRef.current, next); requestAnimationFrame(fit);
+  };
+
+  const toBase = (e: PointerEvent): Pt => {
+    const c = inkRef.current!, base = baseRef.current!; const r = c.getBoundingClientRect(); const k = base.width / r.width;
     return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k, p: e.pointerType === "pen" ? e.pressure || 0.5 : 0.5 };
   };
 
   useEffect(() => {
     const c = inkRef.current; if (!c) return;
-    const down = (e: PointerEvent) => { if (!imgRef.current) return; c.setPointerCapture(e.pointerId); liveRef.current = { ink, pts: [toImg(e)] }; strokesRef.current.push(liveRef.current); };
+    const down = (e: PointerEvent) => { if (!baseRef.current) return; c.setPointerCapture(e.pointerId); liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); };
     const move = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
       const evs: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [e];
-      for (const ev of evs) live.pts.push(toImg(ev));
-      const ctx = c.getContext("2d")!; const sc = c.width / imgRef.current!.naturalWidth; const n = live.pts.length;
+      for (const ev of evs) live.pts.push(toBase(ev));
+      const ctx = c.getContext("2d")!; const sc = c.width / baseRef.current!.width; const n = live.pts.length;
       if (n > 1) { const a = live.pts[n - 2], b = live.pts[n - 1]; ctx.lineCap = "round"; ctx.strokeStyle = live.ink; ctx.lineWidth = widthFor(b.p) * sc; ctx.beginPath(); ctx.moveTo(a.x * sc, a.y * sc); ctx.lineTo(b.x * sc, b.y * sc); ctx.stroke(); }
     };
     const up = () => { liveRef.current = null; };
@@ -101,18 +126,18 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
   }, [ink, loaded]);
 
   const save = async () => {
-    const img = imgRef.current; if (!img) return;
-    if (!strokesRef.current.length) { setMsg("Write something first."); setTimeout(() => setMsg(null), 2000); return; }
+    const base = baseRef.current; if (!base) return;
+    if (!strokesRef.current.length) { flash("Write something first."); return; }
     setSaving(true);
     try {
-      const W = img.naturalWidth, H = img.naturalHeight;
+      const W = base.width, H = base.height;
       const flat = document.createElement("canvas"); flat.width = W; flat.height = H;
-      const fc = flat.getContext("2d")!; fc.drawImage(img, 0, 0); drawStrokes(fc, strokesRef.current, 1);
+      const fc = flat.getContext("2d")!; fc.drawImage(base, 0, 0); drawStrokes(fc, strokesRef.current, 1);
       const layer = document.createElement("canvas"); layer.width = W; layer.height = H; drawStrokes(layer.getContext("2d")!, strokesRef.current, 1);
       const [signed, layerBlob] = await Promise.all([toBlob(flat, "image/jpeg", 0.92), toBlob(layer, "image/png")]);
-      await onSave({ signed, layer: layerBlob, guest: guest.trim() });
+      await onSave({ signed, layer: layerBlob, guest: guest.trim(), frame });
     } catch (e: any) {
-      setMsg("Could not save. " + (e?.message || "Try again.")); setTimeout(() => setMsg(null), 3500);
+      flash("Could not save. " + (e?.message || "Try again."), 3500);
     } finally { setSaving(false); }
   };
 
@@ -120,10 +145,14 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     <div className="sign dark" role="dialog" aria-label="Sign your portrait">
       <div className="sign-top">
         <div><h2>Write your note</h2><div className="hint">Use the Pencil or your finger. It's saved for the couple.</div></div>
+        <div className="seg" role="group" aria-label="Frame">
+          <button aria-pressed={frame === "print"} onClick={() => switchFrame("print")}>Print frame</button>
+          <button aria-pressed={frame === "none"} onClick={() => switchFrame("none")}>Photo only</button>
+        </div>
         <button className="close" onClick={onClose}>Back</button>
       </div>
       <div className="stage" ref={stageRef}>
-        <div className="frame" ref={frameRef}>
+        <div className={"frame" + (frame === "print" ? " paper" : "")} ref={frameRef}>
           <canvas ref={photoRef} />
           <canvas ref={inkRef} className="ink" />
         </div>

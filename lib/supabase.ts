@@ -16,6 +16,7 @@ export type PhotoRow = {
   layer_path: string | null;
   guest_name: string | null;
   signed_at: string | null;
+  frame?: "print" | "none" | null;
   created_at: string;
 };
 
