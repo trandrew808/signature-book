@@ -154,7 +154,8 @@ export default function AdminPage() {
 
                 <div style={{ display: "grid", gap: 8, marginTop: 14, fontSize: 14 }}>
                   <Row label="iPad" value={booth} onCopy={() => copy(booth, "iPad link")} />
-                  <Row label="Editor" value={`${upload}  ·  PIN ${ev.editor_pin}`} onCopy={() => copy(`${upload}\nPIN: ${ev.editor_pin}`, "Editor link and PIN")} />
+                  <Row label="Editor" value={upload} onCopy={() => copy(upload, "Editor link")} />
+                  <Row label="PIN" value={ev.editor_pin} onCopy={() => copy(ev.editor_pin, "Editor PIN")} />
                 </div>
 
                 <div className="row" style={{ marginTop: 14, alignItems: "center" }}>
