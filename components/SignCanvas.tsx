@@ -26,17 +26,21 @@ function drawStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], scale: nu
 }
 
 /**
- * Build the "paper": the photo alone, or an instant-print style frame with a
- * white border and a deep band underneath for the note. Returns a canvas at
+ * Build the "paper": the photo alone, or an instant-print style frame. The
+ * frame is defined by the paper, like real instant film: side and top border
+ * are 5% of the paper width and the writing band is 30% of the paper width,
+ * so every signed portrait shares the same border weight and writing room
+ * whatever the photo's shape. The photo always spans the full width at its
  * native resolution; all ink coordinates are in this canvas's pixel space.
  */
 function makeBase(img: HTMLImageElement, frame: FrameStyle): HTMLCanvasElement {
   const W = img.naturalWidth, H = img.naturalHeight;
   const c = document.createElement("canvas");
   if (frame === "none") { c.width = W; c.height = H; c.getContext("2d")!.drawImage(img, 0, 0); return c; }
-  const m = Math.round(W * 0.05);              // side and top margin
-  const band = Math.round(H * 0.34);           // writing band under the photo
-  c.width = W + 2 * m; c.height = H + m + band + m;
+  const PW = Math.round(W / 0.9);          // paper width: photo is 90% of it
+  const m = Math.round(PW * 0.05);         // side and top border
+  const band = Math.round(PW * 0.30);      // writing band under the photo
+  c.width = PW; c.height = m + H + band;
   const x = c.getContext("2d")!;
   x.fillStyle = "#FBF9F6"; x.fillRect(0, 0, c.width, c.height);
   x.drawImage(img, m, m, W, H);

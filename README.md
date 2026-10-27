@@ -59,7 +59,7 @@ booth/
   {slug}/qr-{timestamp}.png                     event's pre-registration QR
 ```
 
-Guests choose a frame when they sign: **Print frame** (default) adds a white border and a writing band under the photo, like an instant print, so there's always room for a note; **Photo only** writes directly on the image. The `photos.frame` column records which. The ink layer is kept separately so the handwriting can be re-applied to the full-resolution original for an album (for `print`, offset it by the 5% margin).
+Guests choose a frame when they sign: **Print frame** (default) sets the photo on paper like instant film: side and top border 5% of the paper width, writing band 30% of the paper width, photo full width. Every portrait shares the same border weight and writing room, landscape or portrait; **Photo only** writes directly on the image. The `photos.frame` column records which. The ink layer is kept separately so the handwriting can be re-applied to the full-resolution original for an album (for `print`, the photo sits at 5% of the paper width from the left and top, and the paper width is the photo width ÷ 0.9).
 
 ## Notes and next steps
 
