@@ -38,7 +38,7 @@ export default function AdminPage() {
   useEffect(() => { try { const s = sessionStorage.getItem("admin-pin"); if (s) { setPin(s); load(s); } } catch {} // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const unlock = async (e: React.FormEvent) => { e.preventDefault(); if (await load()) { try { sessionStorage.setItem("admin-pin", pin); } catch {} } else toast("Wrong PIN"); };
+  const unlock = async (e: React.FormEvent) => { e.preventDefault(); if (await load()) { try { sessionStorage.setItem("admin-pin", pin); } catch {} } else toast("Wrong admin PIN"); };
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault(); if (!title.trim()) return; setBusy("create");
@@ -97,9 +97,9 @@ export default function AdminPage() {
   if (!unlocked) {
     return (
       <div className="page">
-        <div className="bar"><div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge" /><span className="brand-sub">Events</span></div></div>
+        <div className="bar"><div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge" /><span className="brand-sub">Admin</span></div></div>
         <form className="pin-gate" onSubmit={unlock}>
-          <h2>Team PIN</h2>
+          <h2>Admin PIN</h2>
           <input value={pin} onChange={(e) => setPin(e.target.value)} type="password" inputMode="numeric" autoComplete="off" placeholder="••••" />
           <button className="primary" type="submit">Unlock</button>
           {msg && <div className="stat">{msg}</div>}
@@ -110,7 +110,7 @@ export default function AdminPage() {
 
   return (
     <div className="page">
-      <div className="bar"><div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge" /><span className="brand-sub">Events</span></div>
+      <div className="bar"><div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge" /><span className="brand-sub">Admin</span></div>
         <div className="right"><span className="stat">{events.length} {events.length === 1 ? "event" : "events"}</span></div></div>
       <div className="wrap" style={{ maxWidth: 1000, margin: "0 auto", width: "100%" }}>
         <h2 style={{ fontSize: 30, marginBottom: 6 }}>New event</h2>
