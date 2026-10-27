@@ -10,7 +10,6 @@ Three screens, one link per event:
 | `/{slug}/upload` | Editor (PIN) | Drop zone for exports, QR code upload, live counts |
 | `/{slug}/gallery?key={gallery_token}` | Couple | Signed set, lightbox, one-click ZIP (signed + original + ink layer) |
 | `/admin` | Team (ADMIN_PIN) | Create and manage events, QR codes, links, downloads, deletion |
-| `/admin` | You (admin PIN) | Create events, copy the three links, delete old events |
 
 Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtime). No auth system: guests are anonymous, the editor uses a per-event PIN, the couple's link carries a token.
 
@@ -26,7 +25,6 @@ Stack: Next.js 15 (App Router) on Vercel, Supabase (Postgres + Storage + Realtim
 2. Environment variables (Vercel → Settings → Environment Variables):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `ADMIN_PIN` — any 4+ digit PIN; unlocks `/admin`
    - `ADMIN_PIN` — the team PIN that unlocks `/admin`
    - `SUPABASE_SERVICE_KEY` (server only) — or connect the Supabase resource under Vercel → Storage, which injects `SUPABASE_SERVICE_ROLE_KEY` and the two public vars automatically
 3. Deploy. Live at `book.photoloungehawaii.com` (CNAME at GoDaddy → Vercel). The root redirects to `/admin`.
@@ -35,7 +33,7 @@ Local dev: copy `.env.example` to `.env.local`, fill it in, `npm install`, `npm 
 
 ## 3. Create an event
 
-Open `/admin`, enter the admin PIN, type the couple's names and the date, click **Create event**. You get the three links (iPad, editor + PIN, couple's gallery) with copy buttons. Delete an event there too; it removes its photos and notes.
+Open `/admin`, enter the admin PIN, type the couple's names and the date, click **Create event**. You get the iPad link and the editor link + PIN with copy buttons, upload the Pic-Time QR, view the gallery, download the ZIP, and delete the event when it's delivered.
 
 ## 4. Night of
 
