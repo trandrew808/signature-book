@@ -115,7 +115,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
 
   useEffect(() => {
     const c = inkRef.current; if (!c) return;
-    const down = (e: PointerEvent) => { if (!baseRef.current) return; c.setPointerCapture(e.pointerId); liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); };
+    const down = (e: PointerEvent) => { if (!baseRef.current) return; try { c.setPointerCapture(e.pointerId); } catch {} liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); };
     const move = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
       const evs: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [e];
