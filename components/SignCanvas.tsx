@@ -118,7 +118,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     const down = (e: PointerEvent) => { if (!baseRef.current) return; try { c.setPointerCapture(e.pointerId); } catch {} liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); };
     const move = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
-      const evs: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [e];
+      const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : []; const evs = co && co.length ? co : [e];
       for (const ev of evs) live.pts.push(toBase(ev));
       const ctx = c.getContext("2d")!; const sc = c.width / baseRef.current!.width; const n = live.pts.length;
       if (n > 1) { const a = live.pts[n - 2], b = live.pts[n - 1]; ctx.lineCap = "round"; ctx.strokeStyle = live.ink; ctx.lineWidth = widthFor(b.p) * sc; ctx.beginPath(); ctx.moveTo(a.x * sc, a.y * sc); ctx.lineTo(b.x * sc, b.y * sc); ctx.stroke(); }
