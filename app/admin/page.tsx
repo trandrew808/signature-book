@@ -4,7 +4,6 @@ import { fileUrl, supabaseBrowser, PhotoRow } from "@/lib/supabase";
 
 type Ev = { slug: string; title: string; editor_pin: string; gallery_token: string; qr_path: string | null; created_at: string; total: number; signed: number };
 
-const safeName = (s: string | null) => ((s || "guest").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "guest");
 const inputStyle: React.CSSProperties = { padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 6, background: "var(--card)", color: "var(--fg)", font: "inherit" };
 
 function saveBlob(filename: string, blob: Blob) {
@@ -83,7 +82,7 @@ export default function AdminPage() {
       const JSZip = (await import("jszip")).default; const zip = new JSZip(); const folder = zip.folder(ev.slug)!;
       let i = 0;
       for (const p of photos) {
-        const base = `SB-${String(++i).padStart(3, "0")}-${safeName(p.guest_name)}`;
+        const base = `SB-${String(++i).padStart(3, "0")}`;
         setBusy(`${ev.slug}:${i}/${photos.length}`);
         const get = async (path: string | null) => { if (!path) return null; const r = await fetch(fileUrl(path)!); return r.ok ? r.blob() : null; };
         const [o, s, l] = await Promise.all([get(p.original_path), get(p.signed_path), get(p.layer_path)]);
@@ -199,7 +198,7 @@ export default function AdminPage() {
               {preview.photos.map((p) => (
                 <figure key={p.id} style={{ background: "#262321", borderColor: "#3A3532", cursor: "default" }}>
                   <img src={fileUrl(p.signed_path || p.original_path)!} alt="" loading="lazy" />
-                  <figcaption style={{ color: "#A89E99" }}><b style={{ color: "#F1EAE5" }}>{p.signed_path ? p.guest_name || "A guest" : "Unsigned"}</b><span>{p.signed_at ? new Date(p.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></figcaption>
+                  <figcaption style={{ color: "#A89E99" }}><b style={{ color: "#F1EAE5" }}>{p.signed_path ? "Signed" : "Unsigned"}</b><span>{p.signed_at ? new Date(p.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></figcaption>
                 </figure>
               ))}
             </div>

@@ -48,20 +48,20 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
 
   const qr = fileUrl(event?.qr_path);
 
-  const onSave = async ({ signed, layer, guest, frame }: SignResult) => {
+  const onSave = async ({ signed, layer, frame }: SignResult) => {
     if (!current) return;
     const fd = new FormData();
-    fd.append("photo_id", current.id); fd.append("guest", guest); fd.append("frame", frame);
+    fd.append("photo_id", current.id); fd.append("frame", frame);
     fd.append("signed", signed, "signed.jpg"); fd.append("layer", layer, "ink.png");
     const r = await fetch("/api/sign", { method: "POST", body: fd });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "upload failed");
     setCurrent(null);
-    const file = new File([signed], `${(guest || "portrait").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "portrait"}-signature-book.jpg`, { type: "image/jpeg" });
+    const file = new File([signed], "signature-book-portrait.jpg", { type: "image/jpeg" });
     setShareFile(file);
     const n: any = typeof navigator !== "undefined" ? navigator : null;
     const ok = !!(n && n.share && n.canShare && n.canShare({ files: [file] }));
     setCanShare(ok);
-    setThanks(guest ? `Thank you, ${guest.split(" ")[0]}` : "Thank you");
+    setThanks("Thank you");
     if (thanksTimer.current) clearTimeout(thanksTimer.current);
     thanksTimer.current = setTimeout(() => setThanks(null), ok ? 20000 : qr ? 9000 : 2600);
   };
@@ -86,7 +86,7 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
   if (status === "error") return <div className="empty"><h3>Can't reach the book</h3><p>Check the wifi, then reload.</p></div>;
 
   const Tile = ({ p }: { p: PhotoRow }) => (
-    <button className="tile" aria-label={p.guest_name ? `Portrait signed by ${p.guest_name}` : "Portrait"} onClick={() => setCurrent(p)}>
+    <button className="tile" aria-label={p.signed_path ? "Signed portrait" : "Portrait"} onClick={() => setCurrent(p)}>
       <img src={fileUrl(p.original_path)!} alt="" loading="lazy" />
       {p.signed_path && <span className="mark">✓</span>}
     </button>
@@ -129,7 +129,7 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
       {!kiosk && <button className="kiosk-btn" onClick={() => setKioskPersist(true)}>Lock kiosk</button>}
 
       {current && (
-        <SignCanvas src={fileUrl(current.original_path)!} initialName={current.guest_name || ""} onClose={() => setCurrent(null)} onSave={onSave} />
+        <SignCanvas src={fileUrl(current.original_path)!} onClose={() => setCurrent(null)} onSave={onSave} />
       )}
 
       {thanks && (

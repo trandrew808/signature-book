@@ -123,7 +123,7 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
             {signed.map((p) => (
               <figure key={p.id} onClick={() => setLightbox(p)}>
                 <img src={fileUrl(p.signed_path)!} alt={p.guest_name ? `Signed by ${p.guest_name}` : "Signed portrait"} loading="lazy" />
-                <figcaption><b>{p.guest_name || "A guest"}</b><span>{p.signed_at ? new Date(p.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></figcaption>
+                <figcaption><b>Signed</b><span>{p.signed_at ? new Date(p.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></figcaption>
               </figure>
             ))}
           </div>
@@ -158,7 +158,7 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
         <div className="lightbox" role="dialog" aria-label="Signed portrait" onClick={() => setLightbox(null)}>
           <button className="lb-close" onClick={() => setLightbox(null)}>Close</button>
           <img src={fileUrl(lightbox.signed_path)!} alt="Signed portrait" />
-          <div className="lb-bar"><b>{lightbox.guest_name || "A guest"}</b><span className="stat">{lightbox.signed_at ? new Date(lightbox.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></div>
+          <div className="lb-bar"><b>Signed</b><span className="stat">{lightbox.signed_at ? new Date(lightbox.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></div>
         </div>
       )}
       {msg && <div className="toast">{msg}</div>}

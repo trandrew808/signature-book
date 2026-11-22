@@ -46,7 +46,7 @@ export default function Slideshow({ photos, title, onInteract, hint }:
       {shown ? (
         <figure className={"show-fig" + (fading ? " out" : "")} key={shown.id}>
           <img src={fileUrl(shown.signed_path)!} alt={shown.guest_name ? `Signed by ${shown.guest_name}` : "Signed portrait"} />
-          <figcaption>{shown.guest_name || "A guest"}</figcaption>
+          <figcaption>{title || "The Signature Book"}</figcaption>
         </figure>
       ) : (
         <div className="show-empty">

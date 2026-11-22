@@ -71,10 +71,10 @@ function makeBase(img: HTMLImageElement, frame: FrameStyle): HTMLCanvasElement {
 const toBlob = (c: HTMLCanvasElement, type: string, q?: number) =>
   new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("export failed"))), type, q));
 
-export type SignResult = { signed: Blob; layer: Blob; guest: string; frame: FrameStyle };
+export type SignResult = { signed: Blob; layer: Blob; frame: FrameStyle };
 
-export default function SignCanvas({ src, initialName, onClose, onSave }:
-  { src: string; initialName?: string; onClose: () => void; onSave: (r: SignResult) => Promise<void> }) {
+export default function SignCanvas({ src, onClose, onSave }:
+  { src: string; onClose: () => void; onSave: (r: SignResult) => Promise<void> }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const photoRef = useRef<HTMLCanvasElement>(null);
@@ -89,8 +89,6 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
   const [dbg, setDbg] = useState<string | null>(null);
   const debugOn = typeof window !== "undefined" && /[?&]debug=1/.test(window.location.search);
   const strokeT0 = useRef(0); const moveEvents = useRef(0);
-  const [guest, setGuest] = useState(initialName || "");
-  const [nameOpen, setNameOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -212,7 +210,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
       const fc = flat.getContext("2d")!; fc.drawImage(base, 0, 0); drawStrokes(fc, strokesRef.current, 1);
       const layer = document.createElement("canvas"); layer.width = W; layer.height = H; drawStrokes(layer.getContext("2d")!, strokesRef.current, 1);
       const [signed, layerBlob] = await Promise.all([toBlob(flat, "image/jpeg", 0.92), toBlob(layer, "image/png")]);
-      await onSave({ signed, layer: layerBlob, guest: guest.trim(), frame });
+      await onSave({ signed, layer: layerBlob, frame });
     } catch (e: any) {
       flash("Could not save. " + (e?.message || "Try again."), 3500);
     } finally { setSaving(false); }
@@ -245,11 +243,6 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
         </div>
         <button className="tbtn" onClick={() => { strokesRef.current.pop(); redraw(); }}>Undo</button>
         <button className="tbtn" onClick={() => { strokesRef.current = []; redraw(); }}>Clear</button>
-        {nameOpen ? (
-          <input autoFocus value={guest} onChange={(e) => setGuest(e.target.value)} onBlur={() => setNameOpen(false)} onKeyDown={(e) => { if (e.key === "Enter") setNameOpen(false); }} placeholder="Your name" maxLength={60} autoComplete="off" />
-        ) : (
-          <button className="tbtn" onClick={() => setNameOpen(true)}>{guest ? `Name: ${guest}` : "Add your name"}</button>
-        )}
         <button className="primary" onClick={save} disabled={saving || !loaded}>{saving ? "Saving…" : "Save to the book"}</button>
       </div>
       {msg && <div className="toast">{msg}</div>}

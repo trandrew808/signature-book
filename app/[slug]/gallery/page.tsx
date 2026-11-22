@@ -3,7 +3,6 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useEvent } from "@/lib/useEvent";
 import { fileUrl, PhotoRow, supabaseBrowser } from "@/lib/supabase";
 
-const safeName = (p: PhotoRow) => ((p.guest_name || "guest").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "guest");
 const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
 
 async function fetchBlob(url: string) { const r = await fetch(url); if (!r.ok) throw new Error("fetch failed"); return r.blob(); }
@@ -36,7 +35,7 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip(); const folder = zip.folder("signature-book")!; let i = 0;
     for (const p of [...signed].reverse()) {
-      const base = `SB-${String(++i).padStart(3, "0")}-${safeName(p)}`;
+      const base = `SB-${String(++i).padStart(3, "0")}`;
       setPacking(`Packing ${i}/${signed.length}`);
       try {
         folder.file(`${base}-signed.jpg`, await fetchBlob(fileUrl(p.signed_path)!));
@@ -69,7 +68,7 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
           {signed.map((p) => (
             <figure key={p.id} onClick={() => { setLb(p); setShowOriginal(false); }}>
               <img src={fileUrl(p.signed_path)!} alt={p.guest_name ? `Signed by ${p.guest_name}` : "Signed portrait"} loading="lazy" />
-              <figcaption><b>{p.guest_name || "A guest"}</b><span>{timeOf(p.signed_at)}</span></figcaption>
+              <figcaption><b>Signed</b><span>{timeOf(p.signed_at)}</span></figcaption>
             </figure>
           ))}
         </div>
@@ -80,8 +79,8 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
           <button className="lb-close" onClick={() => setLb(null)}>Close</button>
           <img src={fileUrl(showOriginal ? lb.original_path : lb.signed_path)!} alt="Signed portrait" />
           <div className="lb-bar">
-            <b>{lb.guest_name || "A guest"}</b><span className="stat">{timeOf(lb.signed_at)}</span>
-            <a className="tbtn" href={fileUrl(showOriginal ? lb.original_path : lb.signed_path)!} download={`${safeName(lb)}-${showOriginal ? "original" : "signed"}.jpg`} target="_blank" rel="noreferrer">Download</a>
+            <b>Signed</b><span className="stat">{timeOf(lb.signed_at)}</span>
+            <a className="tbtn" href={fileUrl(showOriginal ? lb.original_path : lb.signed_path)!} download={`signature-book-${showOriginal ? "original" : "signed"}.jpg`} target="_blank" rel="noreferrer">Download</a>
             <button className="tbtn" onClick={() => setShowOriginal((v) => !v)}>{showOriginal ? "Show signed" : "Unsigned original"}</button>
           </div>
         </div>

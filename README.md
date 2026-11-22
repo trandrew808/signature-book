@@ -7,7 +7,7 @@ Three screens, one link per event:
 | URL | Who | What |
 |---|---|---|
 | `/{slug}` | Guests (iPad, no login) | "Find Your Portrait" grid → sign → thank-you with gallery QR |
-| `/{slug}/upload` | Editor (PIN) | Drop zone for exports, live \"Signed tonight\" feed with names, QR code upload, × to delete a portrait |
+| `/{slug}/upload` | Editor (PIN) | Drop zone for exports, live \"Signed tonight\" feed, QR code upload, × to delete a portrait |
 | `/{slug}/gallery?key={gallery_token}` | Couple | Signed set, lightbox, one-click ZIP (signed + original + ink layer) |
 | `/{slug}/wall` | TV / second screen | Live slideshow of signed portraits, newest first |
 | `/admin` | Team (ADMIN_PIN) | Create and manage events, QR codes, links, downloads, deletion |
@@ -50,7 +50,7 @@ BOOTH_URL=https://book.photoloungehawaii.com BOOTH_EVENT={slug} BOOTH_PIN={pin} 
 
 Every export lands on the iPad in a few seconds. The Upload page works as a manual fallback (drag and drop) and is where the editor uploads the Pic-Time pre-registration QR.
 
-**Delivery**: in `/admin`, "Download signed" gives a ZIP named `SB-001-Guest-Name-signed.jpg / -original.jpg / -ink.png`, in signing order, ready to import into Lightroom and publish to Pic-Time as a "Signature Book" scene. (A couple's web gallery also exists at `/{slug}/gallery?key={gallery_token}` if you ever want to share one directly.)
+**Delivery**: in `/admin`, "Download signed" gives a ZIP named `SB-001-signed.jpg / -original.jpg / -ink.png`, in signing order, ready to import into Lightroom and publish to Pic-Time as a "Signature Book" scene. (A couple's web gallery also exists at `/{slug}/gallery?key={gallery_token}` if you ever want to share one directly.)
 
 ## Storage layout
 
