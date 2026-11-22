@@ -86,6 +86,9 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
   const [frame, setFrame] = useState<FrameStyle>("print");
   const [ink, setInk] = useState(INKS[0].color);
   const [size, setSize] = useState(1);
+  const [dbg, setDbg] = useState<string | null>(null);
+  const debugOn = typeof window !== "undefined" && /[?&]debug=1/.test(window.location.search);
+  const strokeT0 = useRef(0); const moveEvents = useRef(0);
   const [guest, setGuest] = useState(initialName || "");
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -160,13 +163,14 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
       if (!baseRef.current) return;
       try { c.setPointerCapture(e.pointerId); } catch {}
       const r = c.getBoundingClientRect(); geoRef.current = { left: r.left, top: r.top, k: baseRef.current.width / r.width };
-      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0;
+      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0; strokeT0.current = performance.now(); moveEvents.current = 0;
       const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / baseRef.current.width; const p = liveRef.current.pts[0];
       ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(p.x * sc, p.y * sc, widthFor(p.p, size) * sc / 2, 0, Math.PI * 2); ctx.fill();
     };
     const move = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
       if (hovering(e)) return;
+      moveEvents.current++;
       // Safari delivers Pencil input in bursts: keep every coalesced sample, paint them next frame.
       const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
       if (co && co.length) for (const ev of co) live.pts.push(toBase(ev)); else live.pts.push(toBase(e));
@@ -175,7 +179,13 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     const up = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
       if (e.type === "pointerup" && e.clientX && geoRef.current) live.pts.push(toBase(e));
-      paint(); liveRef.current = null;
+      paint();
+      if (debugOn) {
+        const ms = Math.max(1, performance.now() - strokeT0.current); const n = live.pts.length;
+        const ps = live.pts.map((q) => q.p); const pmin = Math.min(...ps).toFixed(2), pmax = Math.max(...ps).toFixed(2);
+        setDbg(`${e.pointerType} · ${n} pts in ${Math.round(ms)}ms (${Math.round(n / ms * 1000)}/s, ${moveEvents.current} events) · pressure ${pmin}–${pmax} · dpr ${window.devicePixelRatio} · canvas ${c.width}×${c.height}`);
+      }
+      liveRef.current = null;
     };
     c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move); c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
     return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); c.removeEventListener("pointerup", up); c.removeEventListener("pointercancel", up); if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
@@ -229,6 +239,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
         <button className="primary" onClick={save} disabled={saving || !loaded}>{saving ? "Saving…" : "Save to the book"}</button>
       </div>
       {msg && <div className="toast">{msg}</div>}
+      {debugOn && <div className="dbg">{dbg || "debug: write a stroke"}</div>}
     </div>
   );
 }
