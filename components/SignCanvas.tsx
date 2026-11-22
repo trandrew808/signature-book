@@ -159,25 +159,31 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
 
   useEffect(() => {
     const c = inkRef.current; if (!c) return;
+    const activeId = { current: -1 };
     const down = (e: PointerEvent) => {
       if (!baseRef.current) return;
-      try { c.setPointerCapture(e.pointerId); } catch {}
+      if (e.pointerType === "touch" && liveRef.current && activeId.current !== -1) return; // palm while the pen is down
+      e.preventDefault();
+      // Register the stroke BEFORE anything else: setPointerCapture can synchronously flush queued
+      // moves on iPadOS, and if the stroke doesn't exist yet those samples (the whole start of a quick
+      // letter) are lost.
       const r = c.getBoundingClientRect(); geoRef.current = { left: r.left, top: r.top, k: baseRef.current.width / r.width };
-      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0; strokeT0.current = performance.now(); moveEvents.current = 0;
+      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0;
+      activeId.current = e.pointerId; strokeT0.current = performance.now(); moveEvents.current = 0;
       const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / baseRef.current.width; const p = liveRef.current.pts[0];
       ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(p.x * sc, p.y * sc, widthFor(p.p, size) * sc / 2, 0, Math.PI * 2); ctx.fill();
+      try { c.setPointerCapture(e.pointerId); } catch {}
     };
     const move = (e: PointerEvent) => {
-      const live = liveRef.current; if (!live) return;
+      const live = liveRef.current; if (!live || e.pointerId !== activeId.current) return;
       if (hovering(e)) return;
       moveEvents.current++;
-      // Safari delivers Pencil input in bursts: keep every coalesced sample, paint them next frame.
       const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
       if (co && co.length) for (const ev of co) live.pts.push(toBase(ev)); else live.pts.push(toBase(e));
-      paint();
+      schedule();
     };
     const up = (e: PointerEvent) => {
-      const live = liveRef.current; if (!live) return;
+      const live = liveRef.current; if (!live || e.pointerId !== activeId.current) return;
       if (e.type === "pointerup" && e.clientX && geoRef.current) live.pts.push(toBase(e));
       paint();
       if (debugOn) {
@@ -185,10 +191,13 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
         const ps = live.pts.map((q) => q.p); const pmin = Math.min(...ps).toFixed(2), pmax = Math.max(...ps).toFixed(2);
         setDbg(`${e.pointerType} · ${n} pts in ${Math.round(ms)}ms (${Math.round(n / ms * 1000)}/s, ${moveEvents.current} events) · pressure ${pmin}–${pmax} · dpr ${window.devicePixelRatio} · canvas ${c.width}×${c.height}`);
       }
-      liveRef.current = null;
+      liveRef.current = null; activeId.current = -1;
     };
-    c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move); c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
-    return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); c.removeEventListener("pointerup", up); c.removeEventListener("pointercancel", up); if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
+    // The whole document hears up/cancel, so a stroke ends even if the pointer escapes the canvas.
+    const docUp = (e: PointerEvent) => { if (activeId.current !== -1 && e.pointerId === activeId.current) up(e); };
+    document.addEventListener("pointerup", docUp); document.addEventListener("pointercancel", docUp);
+    c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move);
+    return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); document.removeEventListener("pointerup", docUp); document.removeEventListener("pointercancel", docUp); if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ink, size, loaded]);
 
