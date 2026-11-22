@@ -96,7 +96,14 @@ h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;l
 .steps li::before{counter-increment:s;content:counter(s,decimal-leading-zero);font-family:var(--display);font-size:20px;color:var(--accent);line-height:1}
 .steps b{font-weight:500}
 .steps small{display:block;color:var(--fg2)}
-.recent-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:14px}
+.recent-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:14px}
+.recent-list .tile{position:relative}
+.tile-x{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(43,42,40,.78);color:#fff;font-size:16px;line-height:1;display:grid;place-items:center;opacity:0;transition:opacity .15s}
+.recent-list .tile:hover .tile-x,.recent-list .tile:focus-within .tile-x{opacity:1}
+@media (hover:none){.tile-x{opacity:1}}
+.tile-confirm{position:absolute;inset:0;background:rgba(251,249,246,.94);display:grid;place-content:center;gap:6px;text-align:center;font-size:11px;color:var(--fg);padding:6px}
+.tile-confirm .tbtn{padding:4px 10px;font-size:10px}
+.tbtn.danger{color:var(--bad);border-color:var(--bad)}
 .note{font-size:13px;color:var(--fg2);border-left:2px solid var(--accent);padding-left:10px;margin-top:14px}
 .pin-gate{max-width:360px;margin:60px auto;display:grid;gap:12px;text-align:center}
 .pin-gate input{padding:12px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:22px;text-align:center;letter-spacing:.3em;background:var(--card);color:var(--fg)}

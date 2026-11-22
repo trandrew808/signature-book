@@ -11,6 +11,7 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [over, setOver] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
 
@@ -36,6 +37,14 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
       try { await post(f, "photo"); n++; } catch (e: any) { toast(`${f.name}: ${e.message}`); }
     }
     setBusy(null); toast(`${n} added to the book`);
+  };
+
+  const removePhoto = async (id: string) => {
+    try {
+      const r = await fetch("/api/photos", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, slug, pin }) });
+      if (!r.ok) throw new Error((await r.json()).error || "delete failed");
+      toast("Portrait removed");
+    } catch (e: any) { toast(e.message); } finally { setConfirmId(null); }
   };
 
   const unlock = async (e: React.FormEvent) => {
@@ -89,8 +98,20 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
             <span className="stat">{busy || `${photos.length} ${photos.length === 1 ? "portrait" : "portraits"} in the book · ${photos.filter((p) => p.signed_path).length} signed`}</span>
           </div>
           <div className="recent-list">
-            {photos.slice(0, 12).map((p) => (
-              <div className="tile" key={p.id}><img src={fileUrl(p.original_path)!} alt="" loading="lazy" />{p.signed_path && <span className="mark">✓</span>}</div>
+            {photos.slice(0, 24).map((p) => (
+              <div className="tile" key={p.id}>
+                <img src={fileUrl(p.original_path)!} alt="" loading="lazy" />
+                {p.signed_path && <span className="mark">✓</span>}
+                {confirmId === p.id ? (
+                  <div className="tile-confirm">
+                    <span>{p.signed_path ? "Signed. Delete anyway?" : "Delete?"}</span>
+                    <button className="tbtn danger" onClick={() => removePhoto(p.id)}>Delete</button>
+                    <button className="tbtn" onClick={() => setConfirmId(null)}>Keep</button>
+                  </div>
+                ) : (
+                  <button className="tile-x" aria-label="Delete this portrait" onClick={() => setConfirmId(p.id)}>×</button>
+                )}
+              </div>
             ))}
           </div>
 
