@@ -118,10 +118,20 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     const down = (e: PointerEvent) => { if (!baseRef.current) return; try { c.setPointerCapture(e.pointerId); } catch {} liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); };
     const move = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
-      const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : []; const evs = co && co.length ? co : [e];
+      if (e.pointerType === "pen" && e.buttons === 0) return; // Pencil hovering, not touching
+      // Safari delivers Pencil input in bursts: take every coalesced point, then draw every new segment,
+      // not just the last one, or the stroke comes out dashed.
+      const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
+      const evs = co && co.length ? co : [e];
+      const start = live.pts.length;
       for (const ev of evs) live.pts.push(toBase(ev));
-      const ctx = c.getContext("2d")!; const sc = c.width / baseRef.current!.width; const n = live.pts.length;
-      if (n > 1) { const a = live.pts[n - 2], b = live.pts[n - 1]; ctx.lineCap = "round"; ctx.strokeStyle = live.ink; ctx.lineWidth = widthFor(b.p) * sc; ctx.beginPath(); ctx.moveTo(a.x * sc, a.y * sc); ctx.lineTo(b.x * sc, b.y * sc); ctx.stroke(); }
+      const ctx = c.getContext("2d")!; const sc = c.width / baseRef.current!.width;
+      ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = live.ink;
+      for (let i = Math.max(1, start); i < live.pts.length; i++) {
+        const a = live.pts[i - 1], b = live.pts[i];
+        ctx.lineWidth = widthFor(b.p) * sc;
+        ctx.beginPath(); ctx.moveTo(a.x * sc, a.y * sc); ctx.lineTo(b.x * sc, b.y * sc); ctx.stroke();
+      }
     };
     const up = () => { liveRef.current = null; };
     c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move); c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
