@@ -90,6 +90,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
   const debugOn = typeof window !== "undefined" && /[?&]debug=1/.test(window.location.search);
   const strokeT0 = useRef(0); const moveEvents = useRef(0);
   const [guest, setGuest] = useState(initialName || "");
+  const [nameOpen, setNameOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -229,8 +230,8 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
       </div>
       <div className="stage" ref={stageRef}>
         <div className={"frame" + (frame === "print" ? " paper" : "")} ref={frameRef}>
-          <canvas ref={photoRef} />
-          <canvas ref={inkRef} className="ink" />
+          <canvas ref={photoRef} aria-hidden="true" />
+          <canvas ref={inkRef} className="ink" role="img" aria-label="Writing surface" {...({ inputMode: "none", contentEditable: false, "data-scribble": "false" } as any)} />
         </div>
       </div>
       <div className="tools">
@@ -244,7 +245,11 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
         </div>
         <button className="tbtn" onClick={() => { strokesRef.current.pop(); redraw(); }}>Undo</button>
         <button className="tbtn" onClick={() => { strokesRef.current = []; redraw(); }}>Clear</button>
-        <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Your name (optional)" maxLength={60} autoComplete="off" />
+        {nameOpen ? (
+          <input autoFocus value={guest} onChange={(e) => setGuest(e.target.value)} onBlur={() => setNameOpen(false)} onKeyDown={(e) => { if (e.key === "Enter") setNameOpen(false); }} placeholder="Your name" maxLength={60} autoComplete="off" />
+        ) : (
+          <button className="tbtn" onClick={() => setNameOpen(true)}>{guest ? `Name: ${guest}` : "Add your name"}</button>
+        )}
         <button className="primary" onClick={save} disabled={saving || !loaded}>{saving ? "Saving…" : "Save to the book"}</button>
       </div>
       {msg && <div className="toast">{msg}</div>}
