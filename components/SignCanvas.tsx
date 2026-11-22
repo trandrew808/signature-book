@@ -30,17 +30,8 @@ function drawRun(ctx: CanvasRenderingContext2D, pts: Pt[], from: number, to: num
     while (j + 1 <= to && Math.abs(widthFor(pts[j + 1].p, size) - w) < 1.2 * size) j++;
     ctx.lineWidth = w * scale;
     ctx.beginPath();
-    const p0 = pts[i - 1];
-    ctx.moveTo(p0.x * scale, p0.y * scale);
-    if (j === i) {
-      ctx.lineTo(pts[i].x * scale, pts[i].y * scale);
-    } else {
-      for (let k = i; k < j; k++) {
-        const a = pts[k], b = pts[k + 1];
-        ctx.quadraticCurveTo(a.x * scale, a.y * scale, ((a.x + b.x) / 2) * scale, ((a.y + b.y) / 2) * scale);
-      }
-      ctx.lineTo(pts[j].x * scale, pts[j].y * scale);
-    }
+    ctx.moveTo(pts[i - 1].x * scale, pts[i - 1].y * scale);
+    for (let k = i; k <= j; k++) ctx.lineTo(pts[k].x * scale, pts[k].y * scale);
     ctx.stroke();
     i = j + 1;
   }
@@ -152,9 +143,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
   };
   const hovering = (e: PointerEvent) => e.pointerType === "pen" && e.buttons === 0 && e.pressure === 0 && e.type !== "pointerdown";
 
-  // Paint whatever arrived since the last frame, once per frame; then a short predicted tail so the
-  // visible line reaches the tip a frame early. The tail is redrawn from the committed line each frame.
-  const predRef = useRef<Pt[]>([]);
+  // Paint whatever arrived since the last frame, once per frame.
   const paint = () => {
     rafRef.current = null;
     const live = liveRef.current, c = inkRef.current, base = baseRef.current; if (!live || !c || !base) return;
@@ -162,13 +151,6 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = live.ink;
     const last = live.pts.length - 1;
     if (last > paintedRef.current) { drawRun(ctx, live.pts, paintedRef.current + 1, last, sc, live.size); paintedRef.current = last; }
-    if (predRef.current.length) {
-      // draw prediction lightly; it is overdrawn by the real points next frame
-      ctx.save(); ctx.globalAlpha = 0.85;
-      const tail = [live.pts[last], ...predRef.current];
-      drawRun(ctx, tail, 1, tail.length - 1, sc, live.size);
-      ctx.restore();
-    }
   };
   const schedule = () => { if (rafRef.current == null) rafRef.current = requestAnimationFrame(paint); };
 
@@ -178,7 +160,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
       if (!baseRef.current) return;
       try { c.setPointerCapture(e.pointerId); } catch {}
       const r = c.getBoundingClientRect(); geoRef.current = { left: r.left, top: r.top, k: baseRef.current.width / r.width };
-      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0; predRef.current = [];
+      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0;
       const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / baseRef.current.width; const p = liveRef.current.pts[0];
       ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(p.x * sc, p.y * sc, widthFor(p.p, size) * sc / 2, 0, Math.PI * 2); ctx.fill();
     };
@@ -188,14 +170,12 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
       // Safari delivers Pencil input in bursts: keep every coalesced sample, paint them next frame.
       const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
       if (co && co.length) for (const ev of co) live.pts.push(toBase(ev)); else live.pts.push(toBase(e));
-      const pr: PointerEvent[] = (e as any).getPredictedEvents ? (e as any).getPredictedEvents() : [];
-      predRef.current = pr && pr.length ? pr.slice(0, 3).map(toBase) : [];
       schedule();
     };
     const up = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
       if (e.type === "pointerup" && e.clientX && geoRef.current) live.pts.push(toBase(e));
-      predRef.current = []; paint(); liveRef.current = null;
+      paint(); liveRef.current = null;
     };
     c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move); c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
     return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); c.removeEventListener("pointerup", up); c.removeEventListener("pointercancel", up); if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
