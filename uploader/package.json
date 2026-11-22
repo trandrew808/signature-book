@@ -45,6 +45,11 @@
       "icon*.png",
       "tray*.png"
     ],
-    "publish": null
+    "publish": null,
+    "artifactName": "Booth-Uploader-${arch}.zip"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trandrew808/signature-book.git"
   }
 }

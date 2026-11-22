@@ -1,5 +1,9 @@
 "use client";
 import { use, useEffect, useMemo, useRef, useState } from "react";
+
+const RELEASES = "https://github.com/trandrew808/signature-book/releases/latest/download";
+const UPLOADER_ARM = `${RELEASES}/Booth-Uploader-arm64.zip`;
+const UPLOADER_X64 = `${RELEASES}/Booth-Uploader-x64.zip`;
 import { useEvent } from "@/lib/useEvent";
 import { fileUrl, PhotoRow } from "@/lib/supabase";
 
@@ -86,7 +90,15 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
   }
 
   const qr = fileUrl(event?.qr_path);
-  const galleryLink = typeof window !== "undefined" ? `${window.location.origin}/${slug}/gallery` : `/${slug}/gallery`;
+  const editorLink = typeof window !== "undefined" ? `${window.location.origin}/${slug}/upload` : `/${slug}/upload`;
+  const copy = async (text: string, label: string) => {
+    try { if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); toast(`${label} copied`); return; } } catch {}
+    const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+    let ok = false; try { ok = document.execCommand("copy"); } catch {}
+    ta.remove();
+    toast(ok ? `${label} copied` : "Copy blocked here. Select the link text and copy it.");
+  };
 
   return (
     <div className="page">
@@ -97,7 +109,7 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
       <div className="wrap two">
         <div className="panel">
           <h2>Send portraits to the iPad</h2>
-          <p>Export from Lightroom straight into this drop zone, or run the watcher on the laptop so exports upload themselves.</p>
+          <p>Drop exports here, or let the Booth Uploader app on your Mac send them automatically (see the right column).</p>
           <label className={"drop" + (over ? " over" : "")}
             onDragEnter={(e) => { e.preventDefault(); setOver(true); }} onDragOver={(e) => { e.preventDefault(); setOver(true); }}
             onDragLeave={(e) => { e.preventDefault(); setOver(false); }} onDrop={(e) => { e.preventDefault(); setOver(false); addFiles(e.dataTransfer.files); }}>
@@ -156,18 +168,37 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
             {qr && <button className="tbtn" onClick={async () => { const r = await fetch("/api/upload", { method: "DELETE", body: JSON.stringify({ slug, pin }), headers: { "content-type": "application/json" } }); toast(r.ok ? "QR removed" : "Could not remove"); }}>Remove</button>}
           </div>
 
-          <h2 style={{ marginTop: 28 }}>Couple's gallery link</h2>
-          <p>Send this to the couple after the wedding. The key is in the event's row in Supabase (gallery_token).</p>
-          <code className="stat" style={{ wordBreak: "break-all" }}>{galleryLink}?key=…</code>
+          <h2 style={{ marginTop: 28 }}>Booth Uploader (Mac menu-bar app)</h2>
+          <p>Watches a folder on your Mac and sends every new export here on its own. Install once, set up per event.</p>
+          <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+            <a className="tbtn" href={UPLOADER_ARM} target="_blank" rel="noreferrer">Download · Apple Silicon</a>
+            <a className="tbtn" href={UPLOADER_X64} target="_blank" rel="noreferrer">Download · Intel Mac</a>
+            <a className="tbtn" href="/editor-setup-card.pdf" target="_blank" rel="noreferrer">Setup card (PDF)</a>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 10, alignItems: "center", marginTop: 14, fontSize: 14 }}>
+            <span className="eyebrow">Link</span>
+            <code className="stat" style={{ wordBreak: "break-all", userSelect: "text", WebkitUserSelect: "text" }}>{editorLink}</code>
+            <button className="tbtn" onClick={() => copy(editorLink, "Editor link")}>Copy</button>
+            <span className="eyebrow">PIN</span>
+            <code className="stat">{pin}</code>
+            <button className="tbtn" onClick={() => copy(pin, "PIN")}>Copy</button>
+          </div>
+          <ol className="steps" style={{ marginTop: 14 }}>
+            <li><div><b>Install</b><small>Unzip, drag <b>Booth Uploader</b> to Applications and open it. Not sure which chip?  → About This Mac: "Apple M…" is Apple Silicon, "Intel" is Intel.</small></div></li>
+            <li><div><b>First launch only</b><small>macOS says it can't verify the app. Click <b>Done</b> (not Move to Trash), then System Settings → Privacy &amp; Security → scroll down → <b>Open Anyway</b>. If that button never appears, in Terminal: <code>xattr -dr com.apple.quarantine "/Applications/Booth Uploader.app"</code></small></div></li>
+            <li><div><b>Set up this event</b><small>Click the camera icon in the menu bar → <b>Set up event…</b> → paste the link and PIN above, type the couple's names, <b>Choose…</b> a fresh folder for tonight → <b>Start watching</b>.</small></div></li>
+            <li><div><b>Export into that folder</b><small>Lightroom preset "Photo Lounge Booth": JPEG, sRGB, 2500px long edge, quality 85. Everything that lands in the folder is uploaded, so keep it to tonight's lounge photos.</small></div></li>
+          </ol>
+          <p className="note">The menu shows Uploaded tonight, the queue and the last file. Wifi hiccups retry on their own; if something still fails, use <b>Retry failed</b> in the menu. This drop zone works as a fallback any time.</p>
         </div>
         <div className="panel">
           <h2>Night-of workflow</h2>
           <ol className="steps">
             <li><div><b>Shoot in the lounge</b><small>Tethered or card to laptop. Keep a consistent frame so the grid reads clean.</small></div></li>
-            <li><div><b>Edit in Lightroom</b><small>Apply the event preset, export 2500px long edge JPEG (quality 85) into the watched folder.</small></div></li>
-            <li><div><b>Auto-upload</b><small><code>npm run watcher</code> on the laptop posts every new export here. No clicks.</small></div></li>
+            <li><div><b>Edit in Lightroom</b><small>Apply the event preset, export 2500px long edge JPEG (quality 85) into tonight's watch folder.</small></div></li>
+            <li><div><b>Auto-upload</b><small>Booth Uploader posts every new export here within seconds. No clicks. Delete a wrong one with the × on its thumbnail.</small></div></li>
             <li><div><b>Guests find themselves</b><small>The iPad shows "Just taken" first, so the guests who just stepped away from the camera see their portrait at the top.</small></div></li>
-            <li><div><b>Deliver</b><small>The gallery link is the couple's signed set, with a one-click ZIP for Pic-Time.</small></div></li>
+            <li><div><b>Deliver</b><small>Andrew downloads the signed set as a ZIP from the admin page and publishes it to Pic-Time.</small></div></li>
           </ol>
           <p className="note">iPad setup: open <code>/{slug}</code> in Safari, Share → Add to Home Screen, open it from there, then triple-click the top button for Guided Access so guests can't leave.</p>
         </div>
