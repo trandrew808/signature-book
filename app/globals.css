@@ -60,6 +60,9 @@ h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;l
 .seg{display:flex;margin-left:auto;border:1px solid var(--line);border-radius:999px;overflow:hidden}
 .seg button{padding:7px 14px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg2)}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg.sizes{margin-left:0}
+.seg.sizes button{display:inline-flex;align-items:center;gap:6px}
+.seg.sizes i{display:inline-block;border-radius:50%;background:currentColor}
 .stage .frame.paper{box-shadow:0 2px 0 rgba(0,0,0,.15),0 24px 60px rgba(0,0,0,.5)}
 .sign-top .close{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg2);padding:8px 10px}
 .stage{flex:1;min-height:0;display:grid;place-items:center;padding:12px}

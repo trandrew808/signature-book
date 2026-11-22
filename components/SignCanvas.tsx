@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type Pt = { x: number; y: number; p: number };
-type Stroke = { ink: string; pts: Pt[] };
+type Stroke = { ink: string; size: number; pts: Pt[] };
 export type FrameStyle = "print" | "none";
 
 const INKS = [
@@ -12,21 +12,22 @@ const INKS = [
 ];
 
 // Stroke width in photo pixels (the base canvas is 2500px on the long edge).
-// A light Pencil hand sits around p≈0.2, so the floor is generous and the curve eases in:
-// 0.2 → ~5.5px, 0.5 → ~7px, 0.9 → ~9px. Fingers report p=0.5.
-const widthFor = (p: number) => 4.5 + 5 * Math.sqrt(Math.max(0, Math.min(1, p)));
+// `size` is the guest's pen size (1 = default). A light Pencil hand sits around p≈0.2,
+// so the floor is generous and the curve eases in. Fingers report p=0.5.
+const widthFor = (p: number, size = 1) => size * (4.5 + 5 * Math.sqrt(Math.max(0, Math.min(1, p))));
+const SIZES = [{ v: 0.6, label: "Fine" }, { v: 1, label: "Pen" }, { v: 1.7, label: "Marker" }];
 
 /**
  * Draw points [from, to] of a stroke as smoothed runs. Consecutive points with
  * similar pressure share one path (quadratic midpoints), so a burst of Pencil
  * input costs a handful of stroke() calls instead of one per sample.
  */
-function drawRun(ctx: CanvasRenderingContext2D, pts: Pt[], from: number, to: number, scale: number) {
+function drawRun(ctx: CanvasRenderingContext2D, pts: Pt[], from: number, to: number, scale: number, size = 1) {
   let i = Math.max(1, from);
   while (i <= to) {
-    const w = widthFor(pts[i].p);
+    const w = widthFor(pts[i].p, size);
     let j = i;
-    while (j + 1 <= to && Math.abs(widthFor(pts[j + 1].p) - w) < 1.2) j++;
+    while (j + 1 <= to && Math.abs(widthFor(pts[j + 1].p, size) - w) < 1.2 * size) j++;
     ctx.lineWidth = w * scale;
     ctx.beginPath();
     const p0 = pts[i - 1];
@@ -49,8 +50,8 @@ function drawStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], scale: nu
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const s of strokes) {
     ctx.strokeStyle = s.ink;
-    if (s.pts.length === 1) { const p = s.pts[0]; ctx.fillStyle = s.ink; ctx.beginPath(); ctx.arc(p.x * scale, p.y * scale, widthFor(p.p) * scale / 2, 0, Math.PI * 2); ctx.fill(); continue; }
-    drawRun(ctx, s.pts, 1, s.pts.length - 1, scale);
+    if (s.pts.length === 1) { const p = s.pts[0]; ctx.fillStyle = s.ink; ctx.beginPath(); ctx.arc(p.x * scale, p.y * scale, widthFor(p.p, s.size) * scale / 2, 0, Math.PI * 2); ctx.fill(); continue; }
+    drawRun(ctx, s.pts, 1, s.pts.length - 1, scale, s.size);
   }
 }
 
@@ -93,6 +94,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
   const liveRef = useRef<Stroke | null>(null);
   const [frame, setFrame] = useState<FrameStyle>("print");
   const [ink, setInk] = useState(INKS[0].color);
+  const [size, setSize] = useState(1);
   const [guest, setGuest] = useState(initialName || "");
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -144,18 +146,29 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
 
   const toBase = (e: PointerEvent): Pt => {
     const g = geoRef.current!;
-    return { x: (e.clientX - g.left) * g.k, y: (e.clientY - g.top) * g.k, p: e.pointerType === "pen" ? e.pressure || 0.5 : 0.5 };
+    // pressure can read 0 on the first samples of a quick Pencil stroke; treat that as a light touch, not "not drawing"
+    const p = e.pointerType === "pen" ? (e.pressure > 0.02 ? e.pressure : 0.25) : 0.5;
+    return { x: (e.clientX - g.left) * g.k, y: (e.clientY - g.top) * g.k, p };
   };
+  const hovering = (e: PointerEvent) => e.pointerType === "pen" && e.buttons === 0 && e.pressure === 0 && e.type !== "pointerdown";
 
-  // Paint whatever arrived since the last frame, once per frame.
+  // Paint whatever arrived since the last frame, once per frame; then a short predicted tail so the
+  // visible line reaches the tip a frame early. The tail is redrawn from the committed line each frame.
+  const predRef = useRef<Pt[]>([]);
   const paint = () => {
     rafRef.current = null;
     const live = liveRef.current, c = inkRef.current, base = baseRef.current; if (!live || !c || !base) return;
-    const last = live.pts.length - 1; if (last <= paintedRef.current) return;
     const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / base.width;
     ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = live.ink;
-    drawRun(ctx, live.pts, paintedRef.current + 1, last, sc);
-    paintedRef.current = last;
+    const last = live.pts.length - 1;
+    if (last > paintedRef.current) { drawRun(ctx, live.pts, paintedRef.current + 1, last, sc, live.size); paintedRef.current = last; }
+    if (predRef.current.length) {
+      // draw prediction lightly; it is overdrawn by the real points next frame
+      ctx.save(); ctx.globalAlpha = 0.85;
+      const tail = [live.pts[last], ...predRef.current];
+      drawRun(ctx, tail, 1, tail.length - 1, sc, live.size);
+      ctx.restore();
+    }
   };
   const schedule = () => { if (rafRef.current == null) rafRef.current = requestAnimationFrame(paint); };
 
@@ -163,27 +176,31 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     const c = inkRef.current; if (!c) return;
     const down = (e: PointerEvent) => {
       if (!baseRef.current) return;
-      if (e.pointerType === "pen" && e.buttons === 0) return;
       try { c.setPointerCapture(e.pointerId); } catch {}
       const r = c.getBoundingClientRect(); geoRef.current = { left: r.left, top: r.top, k: baseRef.current.width / r.width };
-      liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0;
-      // dot for a tap
+      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0; predRef.current = [];
       const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / baseRef.current.width; const p = liveRef.current.pts[0];
-      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(p.x * sc, p.y * sc, widthFor(p.p) * sc / 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(p.x * sc, p.y * sc, widthFor(p.p, size) * sc / 2, 0, Math.PI * 2); ctx.fill();
     };
     const move = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
-      if (e.pointerType === "pen" && e.buttons === 0) return; // hovering
+      if (hovering(e)) return;
       // Safari delivers Pencil input in bursts: keep every coalesced sample, paint them next frame.
       const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
       if (co && co.length) for (const ev of co) live.pts.push(toBase(ev)); else live.pts.push(toBase(e));
+      const pr: PointerEvent[] = (e as any).getPredictedEvents ? (e as any).getPredictedEvents() : [];
+      predRef.current = pr && pr.length ? pr.slice(0, 3).map(toBase) : [];
       schedule();
     };
-    const up = () => { paint(); liveRef.current = null; };
+    const up = (e: PointerEvent) => {
+      const live = liveRef.current; if (!live) return;
+      if (e.type === "pointerup" && e.clientX && geoRef.current) live.pts.push(toBase(e));
+      predRef.current = []; paint(); liveRef.current = null;
+    };
     c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move); c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
     return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); c.removeEventListener("pointerup", up); c.removeEventListener("pointercancel", up); if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ink, loaded]);
+  }, [ink, size, loaded]);
 
   const save = async () => {
     const base = baseRef.current; if (!base) return;
@@ -222,6 +239,9 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
           {INKS.map((i) => (
             <button key={i.color} className="sw" style={{ background: i.color }} aria-pressed={ink === i.color} aria-label={i.label} onClick={() => setInk(i.color)} />
           ))}
+        </div>
+        <div className="seg sizes" role="group" aria-label="Pen size">
+          {SIZES.map((o) => <button key={o.v} aria-pressed={size === o.v} onClick={() => setSize(o.v)}><i style={{ width: 4 + o.v * 6, height: 4 + o.v * 6 }} />{o.label}</button>)}
         </div>
         <button className="tbtn" onClick={() => { strokesRef.current.pop(); redraw(); }}>Undo</button>
         <button className="tbtn" onClick={() => { strokesRef.current = []; redraw(); }}>Clear</button>
