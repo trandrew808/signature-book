@@ -1,7 +1,7 @@
 "use client";
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useEvent } from "@/lib/useEvent";
-import { fileUrl } from "@/lib/supabase";
+import { fileUrl, PhotoRow } from "@/lib/supabase";
 
 export default function UploadPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -12,6 +12,8 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
   const [busy, setBusy] = useState<string | null>(null);
   const [over, setOver] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<PhotoRow | null>(null);
+  const signed = useMemo(() => photos.filter((p) => p.signed_path).sort((a, b) => (b.signed_at! > a.signed_at! ? 1 : -1)), [photos]);
   const fileRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +117,17 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
             ))}
           </div>
 
+          <h2 style={{ marginTop: 28 }}>Signed tonight</h2>
+          <p>{signed.length ? `${signed.length} ${signed.length === 1 ? "guest has" : "guests have"} written a note. Newest first; tap one to see it large.` : "Nothing signed yet. Signed portraits appear here the moment a guest taps Save."}</p>
+          <div className="signed-list">
+            {signed.map((p) => (
+              <figure key={p.id} onClick={() => setLightbox(p)}>
+                <img src={fileUrl(p.signed_path)!} alt={p.guest_name ? `Signed by ${p.guest_name}` : "Signed portrait"} loading="lazy" />
+                <figcaption><b>{p.guest_name || "A guest"}</b><span>{p.signed_at ? new Date(p.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></figcaption>
+              </figure>
+            ))}
+          </div>
+
           <h2 style={{ marginTop: 28 }}>Online gallery QR code</h2>
           <p>Upload this event's pre-registration QR code. Guests see it on the welcome screen and after they sign.</p>
           <div className="row">
@@ -141,6 +154,13 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
           <p className="note">iPad setup: open <code>/{slug}</code> in Safari, Share → Add to Home Screen, open it from there, then triple-click the top button for Guided Access so guests can't leave.</p>
         </div>
       </div>
+      {lightbox && (
+        <div className="lightbox" role="dialog" aria-label="Signed portrait" onClick={() => setLightbox(null)}>
+          <button className="lb-close" onClick={() => setLightbox(null)}>Close</button>
+          <img src={fileUrl(lightbox.signed_path)!} alt="Signed portrait" />
+          <div className="lb-bar"><b>{lightbox.guest_name || "A guest"}</b><span className="stat">{lightbox.signed_at ? new Date(lightbox.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></div>
+        </div>
+      )}
       {msg && <div className="toast">{msg}</div>}
     </div>
   );

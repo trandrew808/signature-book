@@ -7,7 +7,7 @@ Three screens, one link per event:
 | URL | Who | What |
 |---|---|---|
 | `/{slug}` | Guests (iPad, no login) | "Find Your Portrait" grid → sign → thank-you with gallery QR |
-| `/{slug}/upload` | Editor (PIN) | Drop zone for exports, QR code upload, live counts, × to delete a portrait |
+| `/{slug}/upload` | Editor (PIN) | Drop zone for exports, live \"Signed tonight\" feed with names, QR code upload, × to delete a portrait |
 | `/{slug}/gallery?key={gallery_token}` | Couple | Signed set, lightbox, one-click ZIP (signed + original + ink layer) |
 | `/{slug}/wall` | TV / second screen | Live slideshow of signed portraits, newest first |
 | `/admin` | Team (ADMIN_PIN) | Create and manage events, QR codes, links, downloads, deletion |
