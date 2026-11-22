@@ -174,7 +174,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
       // Safari delivers Pencil input in bursts: keep every coalesced sample, paint them next frame.
       const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
       if (co && co.length) for (const ev of co) live.pts.push(toBase(ev)); else live.pts.push(toBase(e));
-      schedule();
+      paint();
     };
     const up = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
