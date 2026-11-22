@@ -1,0 +1,65 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Signature Book — Editor setup card</title>
+<style>
+  @page { size: letter; margin: 0.6in; }
+  body { font: 13px/1.5 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color:#2B2B2B; background:#fff; max-width: 7.3in; margin: 0 auto; padding: 24px; }
+  h1 { font: 600 26px/1.15 Georgia, "Times New Roman", serif; margin:0; }
+  .sub { color:#7A746E; margin:4px 0 22px; }
+  h2 { font: 600 15px/1.2 Georgia, serif; margin:22px 0 8px; padding-bottom:4px; border-bottom:1px solid #E6E0DA; }
+  ol { margin:0; padding-left:20px; } li { margin:4px 0; }
+  code, .mono { font-family: ui-monospace, Menlo, monospace; font-size:12px; background:#FBF9F6; border:1px solid #E6E0DA; border-radius:4px; padding:1px 5px; }
+  table { border-collapse:collapse; width:100%; } td { padding:5px 8px; border-bottom:1px solid #EFEAE4; vertical-align:top; } td:first-child { color:#7A746E; width:34%; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .note { background:#FBF9F6; border-left:3px solid #C9A3A0; padding:8px 12px; margin-top:16px; }
+  .foot { color:#7A746E; font-size:11px; margin-top:26px; }
+</style></head>
+<body>
+  <h1>Signature Book — Editor setup</h1>
+  <p class="sub">Photo Lounge by Redefined Weddings · the editing Mac at the wedding</p>
+
+  <div class="two">
+    <div>
+      <h2>One-time: install Booth Uploader</h2>
+      <ol>
+        <li>Unzip <b>Booth Uploader</b> and drag it into <b>Applications</b>.</li>
+        <li>First launch only: <b>right-click → Open</b>, then <b>Open</b> again (the app isn't App Store signed).</li>
+        <li>It lives in the <b>menu bar</b> (camera icon); there is no Dock icon.</li>
+        <li>Optional: menu → <b>Launch at login</b>.</li>
+      </ol>
+
+      <h2>One-time: Lightroom export preset</h2>
+      <p>Export dialog → set these → <b>Add</b> preset named <b>Photo Lounge Booth</b>:</p>
+      <table>
+        <tr><td>Export to</td><td>Specific folder → <span class="mono">Pictures / Booth Export</span><br><b>Put in subfolder</b>: ✓ — type the event slug (see right)</td></tr>
+        <tr><td>File settings</td><td>JPEG · sRGB · Quality 85</td></tr>
+        <tr><td>Image sizing</td><td>Resize to fit: <b>Long edge 2500 px</b> · 300 ppi</td></tr>
+        <tr><td>Sharpening</td><td>Screen · Standard</td></tr>
+        <tr><td>Metadata</td><td>Copyright only</td></tr>
+        <tr><td>Post-processing</td><td>Do nothing</td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>Every event (2 minutes)</h2>
+      <ol>
+        <li>Open the <b>admin page</b> → the event card → copy the <b>Editor</b> link. PIN is <span class="mono">0000</span> unless Andrew changed it.</li>
+        <li>Menu bar icon → <b>Set up event…</b> → paste the link, type the PIN, type the couple's names → <b>Start watching</b>.</li>
+        <li>The window shows the watch folder, e.g.<br><span class="mono">~/Pictures/Booth Export/sarah-and-kai-2026-11-14</span><br>In Lightroom, set the preset's subfolder to that slug (the part of the link between the slashes).</li>
+        <li>Upload the couple's <b>Pic-Time QR</b> on the editor page (Upload page → QR code) so guests can pre-register.</li>
+      </ol>
+
+      <h2>During the night</h2>
+      <ol>
+        <li>Cull → quick edit → <b>Export with preset</b>. Each photo appears on the iPad within seconds.</li>
+        <li>Menu bar shows <b>Uploaded tonight</b>, queue, and <b>Last</b> file.</li>
+        <li>Wifi hiccup? Uploads retry on their own. Still failing → menu → <b>Retry failed</b>.</li>
+        <li>Wrong photo? Editor page → hover the thumbnail → <b>×</b> → Delete.</li>
+        <li>Watch who's signing in the editor page's <b>Signed tonight</b> feed.</li>
+      </ol>
+
+      <div class="note"><b>Fallback:</b> if the app isn't running, drag JPEGs straight onto the editor page's upload box. Same result.</div>
+    </div>
+  </div>
+
+  <p class="foot">Admin page: book.photoloungehawaii.com/admin · Kiosk unlock on the iPad: hold the logo 2 s, code 0000 · Questions: Andrew</p>
+</body></html>

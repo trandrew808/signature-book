@@ -34,7 +34,7 @@ Local dev: copy `.env.example` to `.env.local`, fill it in, `npm install`, `npm 
 
 ## 3. Create an event
 
-Open `/admin`, enter the admin PIN, type the couple's names and the date, click **Create event**. You get the iPad link and the editor link + PIN with copy buttons, upload the Pic-Time QR, view the gallery, download the ZIP, and delete the event when it's delivered.
+Open `/admin`, enter the admin PIN, type the couple's names and the date, click **Create event**. Every event's editor PIN starts at `0000` (use **Change** on the card to set a different one). You get the iPad link and the editor link + PIN with copy buttons, upload the Pic-Time QR, view the gallery, download the ZIP, and delete the event when it's delivered.
 
 ## 4. Night of
 
@@ -42,13 +42,9 @@ Open `/admin`, enter the admin PIN, type the couple's names and the date, click 
 
 **Wall**: open `/{slug}/wall` on a TV or second iPad for a live crossfading slideshow of signed portraits.
 
-**Laptop**: Lightroom export preset → JPEG, 2500px long edge, quality 85, no subfolder, destination `~/Pictures/Booth Export`. Then in this project folder:
+**Editing Mac**: install **Booth Uploader** (menu-bar app, `uploader/` in this repo; ready-built zips in GitHub Releases or build with `cd uploader && npm install && npm run dist`). First launch: right-click the app → **Open** (it is unsigned), paste the event's editor link and PIN from `/admin`, pick the export folder (default `~/Pictures/Booth Export`). It then watches `~/Pictures/Booth Export/{slug}/` and sends every new JPEG to the Signature Book, with retries for venue wifi. Lightroom export preset "Photo Lounge Booth": JPEG, sRGB, 2500px long edge, quality 85, no subfolder, destination = that event folder. Menu shows uploaded count, queue, failures (with Retry), Pause, Open watch folder, Open editor page, Change event.
 
-```bash
-BOOTH_URL=https://book.photoloungehawaii.com BOOTH_EVENT={slug} BOOTH_PIN={pin} npm run watcher
-```
-
-Every export lands on the iPad in a few seconds. The Upload page works as a manual fallback (drag and drop) and is where the editor uploads the Pic-Time pre-registration QR.
+The Upload page works as a manual fallback (drag and drop) and is where the editor uploads the Pic-Time pre-registration QR. (The old command-line watcher is still in `watcher/`: `BOOTH_URL=… BOOTH_EVENT={slug} BOOTH_PIN={pin} npm run watcher`.)
 
 **Delivery**: in `/admin`, "Download signed" gives a ZIP named `SB-001-signed.jpg / -original.jpg / -ink.png`, in signing order, ready to import into Lightroom and publish to Pic-Time as a "Signature Book" scene. (A couple's web gallery also exists at `/{slug}/gallery?key={gallery_token}` if you ever want to share one directly.)
 

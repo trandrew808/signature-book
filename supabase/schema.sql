@@ -48,4 +48,4 @@ create policy "public read booth files" on storage.objects
   for select using (bucket_id = 'booth');
 
 -- Example event (edit, then open /<slug> on the iPad):
--- insert into events (slug, title, editor_pin) values ('demo', 'Sarah & Kai', '2468');
+-- insert into events (slug, title, editor_pin) values ('demo', 'Sarah & Kai', '0000');

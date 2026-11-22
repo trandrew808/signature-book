@@ -49,6 +49,14 @@ export default function AdminPage() {
     try { const r = await api({ method: "PATCH", body: JSON.stringify(editing) }); if (!r.ok) throw new Error((await r.json()).error); setEditing(null); await load(); toast("Renamed"); }
     catch (err: any) { toast(err.message); } finally { setBusy(null); }
   };
+  const changePin = async (ev: Ev) => {
+    const next = window.prompt("New editor PIN for this event (4 to 8 digits). Every event starts at 0000.", ev.editor_pin);
+    if (next === null || next === ev.editor_pin) return;
+    if (!/^\d{4,8}$/.test(next.trim())) { toast("PIN must be 4 to 8 digits"); return; }
+    setBusy(ev.slug);
+    try { const r = await api({ method: "PATCH", body: JSON.stringify({ slug: ev.slug, pin: next.trim() }) }); if (!r.ok) throw new Error((await r.json()).error); await load(); toast("PIN updated"); }
+    catch (err: any) { toast(err.message); } finally { setBusy(null); }
+  };
   const remove = async (slug: string) => {
     setBusy(slug);
     try { const r = await api({ method: "DELETE", body: JSON.stringify({ slug }) }); if (!r.ok) throw new Error((await r.json()).error); setConfirmSlug(null); if (preview?.ev.slug === slug) setPreview(null); await load(); toast("Deleted"); }
@@ -121,7 +129,7 @@ export default function AdminPage() {
         <div className="right"><span className="stat">{events.length} {events.length === 1 ? "event" : "events"}</span></div></div>
       <div className="wrap" style={{ maxWidth: 1000, margin: "0 auto", width: "100%" }}>
         <h2 style={{ fontSize: 30, marginBottom: 6 }}>New event</h2>
-        <p style={{ color: "var(--fg2)", margin: "0 0 14px" }}>Couple's names and the wedding date. The iPad link and editor PIN are generated for you.</p>
+        <p style={{ color: "var(--fg2)", margin: "0 0 14px" }}>Couple's names and the wedding date. The iPad link is generated for you; the editor PIN starts at 0000 (change it per event if you like).</p>
         <form className="row" onSubmit={create} style={{ marginTop: 0 }}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sarah & Kai" required style={{ ...inputStyle, flex: 2, minWidth: 200 }} />
           <input value={date} onChange={(e) => setDate(e.target.value)} type="date" style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
@@ -154,7 +162,7 @@ export default function AdminPage() {
                 <div style={{ display: "grid", gap: 8, marginTop: 14, fontSize: 14 }}>
                   <Row label="iPad" value={booth} onCopy={() => copy(booth, "iPad link")} />
                   <Row label="Editor" value={upload} onCopy={() => copy(upload, "Editor link")} />
-                  <Row label="PIN" value={ev.editor_pin} onCopy={() => copy(ev.editor_pin, "Editor PIN")} />
+                  <Row label="PIN" value={ev.editor_pin} onCopy={() => copy(ev.editor_pin, "Editor PIN")} extra={<button className="tbtn" disabled={isBusy} onClick={() => changePin(ev)}>Change</button>} />
                 </div>
 
                 <div className="row" style={{ marginTop: 14, alignItems: "center" }}>
@@ -211,12 +219,13 @@ export default function AdminPage() {
   );
 }
 
-function Row({ label, value, onCopy }: { label: string; value: string; onCopy: () => void }) {
+function Row({ label, value, onCopy, extra }: { label: string; value: string; onCopy: () => void; extra?: React.ReactNode }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "64px 1fr auto", gap: 10, alignItems: "center", minWidth: 0 }}>
+    <div style={{ display: "grid", gridTemplateColumns: extra ? "64px 1fr auto auto" : "64px 1fr auto", gap: 10, alignItems: "center", minWidth: 0 }}>
       <span className="eyebrow">{label}</span>
       <code onClick={(e) => { const r = document.createRange(); r.selectNodeContents(e.currentTarget); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(r); }} style={{ fontSize: 13, color: "var(--fg2)", overflowWrap: "anywhere", userSelect: "text", WebkitUserSelect: "text", cursor: "text" }}>{value}</code>
       <button className="tbtn" onClick={onCopy}>Copy</button>
+      {extra}
     </div>
   );
 }

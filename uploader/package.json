@@ -1,0 +1,50 @@
+{
+  "name": "booth-uploader",
+  "productName": "Booth Uploader",
+  "version": "1.0.0",
+  "description": "Watches the Lightroom export folder and sends portraits to the Photo Lounge Signature Book.",
+  "main": "main.js",
+  "private": true,
+  "author": "Photo Lounge by Redefined Weddings",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8"
+  },
+  "dependencies": {
+    "chokidar": "4.0.3",
+    "electron-store": "8.2.0"
+  },
+  "build": {
+    "appId": "com.photoloungehawaii.booth-uploader",
+    "productName": "Booth Uploader",
+    "mac": {
+      "category": "public.app-category.photography",
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.png",
+      "identity": null,
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "setup.html",
+      "icon*.png",
+      "tray*.png"
+    ],
+    "publish": null
+  }
+}

@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Booth Uploader</title>
+<style>
+  :root { --cream:#FBF9F6; --ink:#2B2B2B; --muted:#7A746E; --rose:#C9A3A0; --line:#E6E0DA; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--cream); color:var(--ink); font:14px/1.45 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; padding:22px 26px; -webkit-user-select:none; }
+  h1 { font:600 20px/1.2 Georgia, "Times New Roman", serif; margin:0 0 4px; letter-spacing:.2px; }
+  p.sub { margin:0 0 18px; color:var(--muted); }
+  label { display:block; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:14px 0 6px; }
+  input { width:100%; border:1px solid var(--line); background:#fff; border-radius:8px; padding:10px 12px; font:inherit; color:var(--ink); -webkit-user-select:text; }
+  input:focus { outline:none; border-color:var(--rose); box-shadow:0 0 0 3px rgba(201,163,160,.25); }
+  .row { display:flex; gap:8px; align-items:center; }
+  .row input { flex:1; }
+  button { border:0; border-radius:8px; padding:10px 14px; font:inherit; font-weight:600; cursor:pointer; background:#EFEAE4; color:var(--ink); }
+  button.primary { background:var(--ink); color:#fff; }
+  button:disabled { opacity:.5; cursor:default; }
+  .hint { font-size:12px; color:var(--muted); margin-top:6px; }
+  .folder { font-family: ui-monospace, Menlo, monospace; font-size:12px; color:var(--ink); word-break:break-all; background:#fff; border:1px dashed var(--line); border-radius:8px; padding:8px 10px; margin-top:6px; }
+  .msg { margin-top:14px; min-height:20px; font-size:13px; }
+  .msg.err { color:#A64B45; }
+  .msg.ok { color:#3C7A4E; }
+  .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+</style>
+</head>
+<body>
+  <h1>Booth Uploader</h1>
+  <p class="sub">Paste tonight's editor link and PIN. Anything you export into the watch folder is sent to the Signature Book automatically.</p>
+
+  <label>Editor link</label>
+  <input id="link" placeholder="https://book.photoloungehawaii.com/sarah-and-kai-2026-11-14/upload" autocomplete="off" spellcheck="false" />
+  <div class="hint">Copy it from the admin page (the one that ends in /upload).</div>
+
+  <label>Editor PIN</label>
+  <input id="pin" inputmode="numeric" placeholder="4 digits" autocomplete="off" />
+
+  <label>Event name (shows in the menu)</label>
+  <input id="title" placeholder="Sarah & Kai" autocomplete="off" />
+
+  <label>Export folder</label>
+  <div class="row"><input id="folder" readonly /><button id="pick">Choose…</button></div>
+  <div class="hint">Lightroom exports go into a subfolder named after the event:</div>
+  <div class="folder" id="eventFolder">—</div>
+
+  <div class="msg" id="msg"></div>
+  <div class="actions">
+    <button id="open" style="display:none">Open watch folder</button>
+    <button class="primary" id="save">Start watching</button>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const slugOf = (link) => { try { return new URL(link.trim()).pathname.split("/").filter(Boolean)[0] || ""; } catch { return ""; } };
+  const sep = navigator.platform.startsWith("Win") ? "\\" : "/";
+  function previewFolder() { const s = slugOf($("link").value); $("eventFolder").textContent = s ? `${$("folder").value}${sep}${s}` : $("folder").value || "—"; }
+
+  (async () => {
+    const s = await window.booth.get();
+    if (s.baseUrl && s.slug) $("link").value = `${s.baseUrl}/${s.slug}/upload`;
+    $("pin").value = s.pin || ""; $("title").value = s.eventTitle || ""; $("folder").value = s.folder || "";
+    if (s.slug) { $("open").style.display = ""; $("save").textContent = "Save & watch"; }
+    previewFolder();
+  })();
+
+  $("link").addEventListener("input", previewFolder);
+  $("pick").onclick = async () => { const f = await window.booth.pickFolder(); if (f) { $("folder").value = f; previewFolder(); } };
+  $("open").onclick = () => window.booth.openFolder();
+  $("save").onclick = async () => {
+    const msg = $("msg"); msg.className = "msg"; msg.textContent = "Checking with the server…"; $("save").disabled = true;
+    const r = await window.booth.save({ link: $("link").value, pin: $("pin").value.trim(), folder: $("folder").value, title: $("title").value.trim() });
+    $("save").disabled = false;
+    if (!r.ok) { msg.className = "msg err"; msg.textContent = r.error; return; }
+    msg.className = "msg ok"; msg.textContent = "Watching. You can close this window — the app lives in the menu bar.";
+    $("eventFolder").textContent = r.eventFolder; $("open").style.display = ""; $("save").textContent = "Save & watch";
+  };
+</script>
+</body>
+</html>
