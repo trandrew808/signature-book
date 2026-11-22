@@ -105,10 +105,10 @@ h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;l
 .tile-confirm{position:absolute;inset:0;background:rgba(251,249,246,.94);display:grid;place-content:center;gap:6px;text-align:center;font-size:11px;color:var(--fg);padding:6px}
 .tile-confirm .tbtn{padding:4px 10px;font-size:10px}
 .tbtn.danger{color:var(--bad);border-color:var(--bad)}
-.signed-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:4px}
-.signed-list figure{margin:0;background:var(--card);border:1px solid var(--line);padding:6px;cursor:pointer}
+.signed-list{columns:160px;column-gap:12px;margin-top:4px}
+.signed-list figure{margin:0 0 12px;break-inside:avoid;background:var(--card);border:1px solid var(--line);padding:6px;cursor:pointer}
 .signed-list figure:active{opacity:.85}
-.signed-list img{width:100%;aspect-ratio:3/4;object-fit:contain;background:#FBF9F6;display:block}
+.signed-list img{width:100%;height:auto;display:block}
 .signed-list figcaption{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--fg2);padding:6px 2px 0;font-variant-numeric:tabular-nums}
 .signed-list figcaption b{color:var(--fg);font-weight:400;font-family:var(--display);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .note{font-size:13px;color:var(--fg2);border-left:2px solid var(--accent);padding-left:10px;margin-top:14px}
@@ -120,10 +120,10 @@ h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;l
 .gal-head{display:flex;flex-wrap:wrap;align-items:end;gap:14px;max-width:1100px;margin:0 auto;width:100%}
 .gal-head h2{font-size:34px}
 .gal-head .stat{margin-left:auto}
-.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;max-width:1100px;margin:16px auto 0;width:100%}
-.gal figure{margin:0;background:var(--card);border:1px solid var(--line);padding:8px;cursor:pointer}
+.gal{columns:220px;column-gap:16px;max-width:1100px;margin:16px auto 0;width:100%}
+.gal figure{margin:0 0 16px;break-inside:avoid;background:var(--card);border:1px solid var(--line);padding:8px;cursor:pointer}
 .gal figure:active{opacity:.85}
-.gal img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block}
+.gal img{width:100%;height:auto;display:block}
 .gal figcaption{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--fg2);padding:8px 2px 0;font-variant-numeric:tabular-nums}
 .gal figcaption b{color:var(--fg);font-weight:400;font-family:var(--display);font-size:17px}
 .lightbox{position:fixed;inset:0;z-index:40;background:rgba(20,18,17,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:max(16px,env(safe-area-inset-left,0px));color:#F1EAE5}
