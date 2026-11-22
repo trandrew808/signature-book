@@ -13,15 +13,41 @@ const INKS = [
 
 const widthFor = (p: number) => Math.max(1.2, 1.5 + 3.5 * p);
 
+/**
+ * Draw points [from, to] of a stroke as smoothed runs. Consecutive points with
+ * similar pressure share one path (quadratic midpoints), so a burst of Pencil
+ * input costs a handful of stroke() calls instead of one per sample.
+ */
+function drawRun(ctx: CanvasRenderingContext2D, pts: Pt[], from: number, to: number, scale: number) {
+  let i = Math.max(1, from);
+  while (i <= to) {
+    const w = widthFor(pts[i].p);
+    let j = i;
+    while (j + 1 <= to && Math.abs(widthFor(pts[j + 1].p) - w) < 0.6) j++;
+    ctx.lineWidth = w * scale;
+    ctx.beginPath();
+    const p0 = pts[i - 1];
+    ctx.moveTo(p0.x * scale, p0.y * scale);
+    if (j === i) {
+      ctx.lineTo(pts[i].x * scale, pts[i].y * scale);
+    } else {
+      for (let k = i; k < j; k++) {
+        const a = pts[k], b = pts[k + 1];
+        ctx.quadraticCurveTo(a.x * scale, a.y * scale, ((a.x + b.x) / 2) * scale, ((a.y + b.y) / 2) * scale);
+      }
+      ctx.lineTo(pts[j].x * scale, pts[j].y * scale);
+    }
+    ctx.stroke();
+    i = j + 1;
+  }
+}
+
 function drawStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], scale: number) {
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const s of strokes) {
     ctx.strokeStyle = s.ink;
-    for (let i = 1; i < s.pts.length; i++) {
-      const a = s.pts[i - 1], b = s.pts[i];
-      ctx.lineWidth = widthFor(b.p) * scale;
-      ctx.beginPath(); ctx.moveTo(a.x * scale, a.y * scale); ctx.lineTo(b.x * scale, b.y * scale); ctx.stroke();
-    }
+    if (s.pts.length === 1) { const p = s.pts[0]; ctx.fillStyle = s.ink; ctx.beginPath(); ctx.arc(p.x * scale, p.y * scale, widthFor(p.p) * scale / 2, 0, Math.PI * 2); ctx.fill(); continue; }
+    drawRun(ctx, s.pts, 1, s.pts.length - 1, scale);
   }
 }
 
@@ -82,7 +108,7 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     const maxW = stage.clientWidth - 24, maxH = stage.clientHeight - 24;
     const r = Math.min(maxW / base.width, maxH / base.height, 1.5);
     const cssW = Math.floor(base.width * r), cssH = Math.floor(base.height * r);
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     fr.style.width = cssW + "px"; fr.style.height = cssH + "px";
     for (const c of [pc, ic]) { c.width = Math.round(cssW * dpr); c.height = Math.round(cssH * dpr); c.style.width = cssW + "px"; c.style.height = cssH + "px"; }
     pc.getContext("2d")!.drawImage(base, 0, 0, pc.width, pc.height);
@@ -108,34 +134,51 @@ export default function SignCanvas({ src, initialName, onClose, onSave }:
     baseRef.current = makeBase(imgRef.current, next); requestAnimationFrame(fit);
   };
 
+  // Geometry is cached at pointerdown: calling getBoundingClientRect on every sample forces layout and costs latency.
+  const geoRef = useRef<{ left: number; top: number; k: number } | null>(null);
+  const paintedRef = useRef(0);      // index of the last point already painted on the live stroke
+  const rafRef = useRef<number | null>(null);
+
   const toBase = (e: PointerEvent): Pt => {
-    const c = inkRef.current!, base = baseRef.current!; const r = c.getBoundingClientRect(); const k = base.width / r.width;
-    return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k, p: e.pointerType === "pen" ? e.pressure || 0.5 : 0.5 };
+    const g = geoRef.current!;
+    return { x: (e.clientX - g.left) * g.k, y: (e.clientY - g.top) * g.k, p: e.pointerType === "pen" ? e.pressure || 0.5 : 0.5 };
   };
+
+  // Paint whatever arrived since the last frame, once per frame.
+  const paint = () => {
+    rafRef.current = null;
+    const live = liveRef.current, c = inkRef.current, base = baseRef.current; if (!live || !c || !base) return;
+    const last = live.pts.length - 1; if (last <= paintedRef.current) return;
+    const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / base.width;
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = live.ink;
+    drawRun(ctx, live.pts, paintedRef.current + 1, last, sc);
+    paintedRef.current = last;
+  };
+  const schedule = () => { if (rafRef.current == null) rafRef.current = requestAnimationFrame(paint); };
 
   useEffect(() => {
     const c = inkRef.current; if (!c) return;
-    const down = (e: PointerEvent) => { if (!baseRef.current) return; try { c.setPointerCapture(e.pointerId); } catch {} liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); };
+    const down = (e: PointerEvent) => {
+      if (!baseRef.current) return;
+      if (e.pointerType === "pen" && e.buttons === 0) return;
+      try { c.setPointerCapture(e.pointerId); } catch {}
+      const r = c.getBoundingClientRect(); geoRef.current = { left: r.left, top: r.top, k: baseRef.current.width / r.width };
+      liveRef.current = { ink, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0;
+      // dot for a tap
+      const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / baseRef.current.width; const p = liveRef.current.pts[0];
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(p.x * sc, p.y * sc, widthFor(p.p) * sc / 2, 0, Math.PI * 2); ctx.fill();
+    };
     const move = (e: PointerEvent) => {
       const live = liveRef.current; if (!live) return;
-      if (e.pointerType === "pen" && e.buttons === 0) return; // Pencil hovering, not touching
-      // Safari delivers Pencil input in bursts: take every coalesced point, then draw every new segment,
-      // not just the last one, or the stroke comes out dashed.
+      if (e.pointerType === "pen" && e.buttons === 0) return; // hovering
+      // Safari delivers Pencil input in bursts: keep every coalesced sample, paint them next frame.
       const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
-      const evs = co && co.length ? co : [e];
-      const start = live.pts.length;
-      for (const ev of evs) live.pts.push(toBase(ev));
-      const ctx = c.getContext("2d")!; const sc = c.width / baseRef.current!.width;
-      ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = live.ink;
-      for (let i = Math.max(1, start); i < live.pts.length; i++) {
-        const a = live.pts[i - 1], b = live.pts[i];
-        ctx.lineWidth = widthFor(b.p) * sc;
-        ctx.beginPath(); ctx.moveTo(a.x * sc, a.y * sc); ctx.lineTo(b.x * sc, b.y * sc); ctx.stroke();
-      }
+      if (co && co.length) for (const ev of co) live.pts.push(toBase(ev)); else live.pts.push(toBase(e));
+      schedule();
     };
-    const up = () => { liveRef.current = null; };
+    const up = () => { paint(); liveRef.current = null; };
     c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move); c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
-    return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); c.removeEventListener("pointerup", up); c.removeEventListener("pointercancel", up); };
+    return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); c.removeEventListener("pointerup", up); c.removeEventListener("pointercancel", up); if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ink, loaded]);
 
