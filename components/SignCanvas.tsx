@@ -11,7 +11,10 @@ const INKS = [
   { color: "#B98A88", label: "Rose ink" },
 ];
 
-const widthFor = (p: number) => Math.max(1.2, 1.5 + 3.5 * p);
+// Stroke width in photo pixels (the base canvas is 2500px on the long edge).
+// A light Pencil hand sits around p≈0.2, so the floor is generous and the curve eases in:
+// 0.2 → ~5.5px, 0.5 → ~7px, 0.9 → ~9px. Fingers report p=0.5.
+const widthFor = (p: number) => 4.5 + 5 * Math.sqrt(Math.max(0, Math.min(1, p)));
 
 /**
  * Draw points [from, to] of a stroke as smoothed runs. Consecutive points with
@@ -23,7 +26,7 @@ function drawRun(ctx: CanvasRenderingContext2D, pts: Pt[], from: number, to: num
   while (i <= to) {
     const w = widthFor(pts[i].p);
     let j = i;
-    while (j + 1 <= to && Math.abs(widthFor(pts[j + 1].p) - w) < 0.6) j++;
+    while (j + 1 <= to && Math.abs(widthFor(pts[j + 1].p) - w) < 1.2) j++;
     ctx.lineWidth = w * scale;
     ctx.beginPath();
     const p0 = pts[i - 1];
