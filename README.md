@@ -69,4 +69,4 @@ Guests choose a frame when they sign: **Print frame** (default) sets the photo o
 - A second guest signing the same portrait replaces the first note. If you want multiple notes per photo, make `signed_path` a child table.
 - The gallery key is checked in the browser against a public-readable `events` row, which is fine for a private link but not a secret. Move the check to an API route if galleries need to be locked down harder.
 - Realtime falls back to a 30-second refresh if the venue wifi drops the websocket.
-- Nothing is sent by email or SMS; Pic-Time handles guest registration via the QR.
+- After signing, the thank-you screen offers **Send me my portrait**, which opens the iPad share sheet with the signed JPEG attached (AirDrop, Messages, Mail). Nothing is sent server-side; Pic-Time handles guest registration via the QR.

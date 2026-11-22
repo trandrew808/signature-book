@@ -15,6 +15,9 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
   const { event, photos, status } = useEvent(slug);
   const [current, setCurrent] = useState<PhotoRow | null>(null);
   const [thanks, setThanks] = useState<string | null>(null);
+  const [shareFile, setShareFile] = useState<File | null>(null);
+  const [canShare, setCanShare] = useState(false);
+  const thanksTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [kiosk, setKiosk] = useState(false);
   const [idle, setIdle] = useState(false);
   const [unlock, setUnlock] = useState(false);
@@ -53,8 +56,22 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
     const r = await fetch("/api/sign", { method: "POST", body: fd });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "upload failed");
     setCurrent(null);
+    const file = new File([signed], `${(guest || "portrait").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "portrait"}-signature-book.jpg`, { type: "image/jpeg" });
+    setShareFile(file);
+    const n: any = typeof navigator !== "undefined" ? navigator : null;
+    const ok = !!(n && n.share && n.canShare && n.canShare({ files: [file] }));
+    setCanShare(ok);
     setThanks(guest ? `Thank you, ${guest.split(" ")[0]}` : "Thank you");
-    setTimeout(() => setThanks(null), qr ? 9000 : 2600);
+    if (thanksTimer.current) clearTimeout(thanksTimer.current);
+    thanksTimer.current = setTimeout(() => setThanks(null), ok ? 20000 : qr ? 9000 : 2600);
+  };
+
+  const sharePortrait = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!shareFile) return;
+    if (thanksTimer.current) clearTimeout(thanksTimer.current); // don't dismiss while the share sheet is open
+    try { await (navigator as any).share({ files: [shareFile], title: "My portrait" }); } catch { /* guest cancelled */ }
+    thanksTimer.current = setTimeout(() => setThanks(null), 8000);
   };
 
   // long-press the logo in kiosk mode to get the PIN prompt
@@ -120,6 +137,10 @@ export default function BoothPage({ params }: { params: Promise<{ slug: string }
           <div>
             <h2>{thanks}</h2>
             <p>Your note is in the couple's book.</p>
+            {canShare && shareFile && (
+              <button className="primary share-btn" onClick={sharePortrait}>Send me my portrait</button>
+            )}
+            {canShare && <div className="eyebrow" style={{ marginTop: 8 }}>AirDrop, Messages or Mail</div>}
             {qr && (<div className="qr-block"><img src={qr} alt="QR code for the online gallery" /><div className="eyebrow">Scan to pre-register for the online gallery</div></div>)}
           </div>
         </div>
