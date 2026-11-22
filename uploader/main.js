@@ -18,7 +18,7 @@ const state = { watching: false, uploaded: 0, failed: [], last: "", queue: [], b
 const icon = (name) => nativeImage.createFromPath(path.join(__dirname, name));
 const notify = (title, body) => { try { new Notification({ title, body, silent: true }).show(); } catch {} };
 const apiBase = () => store.get("baseUrl").replace(/\/$/, "");
-const eventFolder = () => { const slug = store.get("slug"); return slug ? path.join(store.get("folder"), slug) : store.get("folder"); };
+const eventFolder = () => store.get("folder"); // the exact folder the editor picked
 
 /** Accept a pasted editor link like https://book.photoloungehawaii.com/sarah-and-kai-2026-11-14/upload */
 function parseEditorLink(text) {

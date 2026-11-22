@@ -39,10 +39,9 @@
   <label>Event name (shows in the menu)</label>
   <input id="title" placeholder="Sarah & Kai" autocomplete="off" />
 
-  <label>Export folder</label>
+  <label>Watch folder</label>
   <div class="row"><input id="folder" readonly /><button id="pick">Choose…</button></div>
-  <div class="hint">Lightroom exports go into a subfolder named after the event:</div>
-  <div class="folder" id="eventFolder">—</div>
+  <div class="hint">Point your Lightroom export preset at this exact folder. Anything that lands here is uploaded, so use a fresh folder per event.</div>
 
   <div class="msg" id="msg"></div>
   <div class="actions">
@@ -52,20 +51,15 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const slugOf = (link) => { try { return new URL(link.trim()).pathname.split("/").filter(Boolean)[0] || ""; } catch { return ""; } };
-  const sep = navigator.platform.startsWith("Win") ? "\\" : "/";
-  function previewFolder() { const s = slugOf($("link").value); $("eventFolder").textContent = s ? `${$("folder").value}${sep}${s}` : $("folder").value || "—"; }
 
   (async () => {
     const s = await window.booth.get();
     if (s.baseUrl && s.slug) $("link").value = `${s.baseUrl}/${s.slug}/upload`;
     $("pin").value = s.pin || ""; $("title").value = s.eventTitle || ""; $("folder").value = s.folder || "";
     if (s.slug) { $("open").style.display = ""; $("save").textContent = "Save & watch"; }
-    previewFolder();
   })();
 
-  $("link").addEventListener("input", previewFolder);
-  $("pick").onclick = async () => { const f = await window.booth.pickFolder(); if (f) { $("folder").value = f; previewFolder(); } };
+  $("pick").onclick = async () => { const f = await window.booth.pickFolder(); if (f) $("folder").value = f; };
   $("open").onclick = () => window.booth.openFolder();
   $("save").onclick = async () => {
     const msg = $("msg"); msg.className = "msg"; msg.textContent = "Checking with the server…"; $("save").disabled = true;
@@ -73,7 +67,7 @@
     $("save").disabled = false;
     if (!r.ok) { msg.className = "msg err"; msg.textContent = r.error; return; }
     msg.className = "msg ok"; msg.textContent = "Watching. You can close this window — the app lives in the menu bar.";
-    $("eventFolder").textContent = r.eventFolder; $("open").style.display = ""; $("save").textContent = "Save & watch";
+    $("open").style.display = ""; $("save").textContent = "Save & watch";
   };
 </script>
 </body>
