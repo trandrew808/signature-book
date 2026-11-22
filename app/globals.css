@@ -111,7 +111,12 @@ h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;l
 .tile-confirm .tbtn{padding:4px 10px;font-size:10px}
 .tbtn.danger{color:var(--bad);border-color:var(--bad)}
 .signed-list{columns:160px;column-gap:12px;margin-top:4px}
-.signed-list figure{margin:0 0 12px;break-inside:avoid;background:var(--card);border:1px solid var(--line);padding:6px;cursor:pointer}
+.signed-list figure{position:relative;margin:0 0 12px;break-inside:avoid;background:var(--card);border:1px solid var(--line);padding:6px}
+.signed-list img{cursor:pointer}
+.signed-list .tile-x{top:10px;right:10px}
+.signed-list figure:hover .tile-x,.signed-list figure:focus-within .tile-x{opacity:1}
+.sig-actions{margin-top:6px;gap:6px}
+.sig-actions .tbtn{padding:4px 9px;font-size:10px}
 .signed-list figure:active{opacity:.85}
 .signed-list img{width:100%;height:auto;display:block}
 .signed-list figcaption{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--fg2);padding:6px 2px 0;font-variant-numeric:tabular-nums}

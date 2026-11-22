@@ -13,6 +13,7 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
   const [over, setOver] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<PhotoRow | null>(null);
+  const [confirmSigned, setConfirmSigned] = useState<string | null>(null);
   const signed = useMemo(() => photos.filter((p) => p.signed_path).sort((a, b) => (b.signed_at! > a.signed_at! ? 1 : -1)), [photos]);
   const fileRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLInputElement>(null);
@@ -39,6 +40,14 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
       try { await post(f, "photo"); n++; } catch (e: any) { toast(`${f.name}: ${e.message}`); }
     }
     setBusy(null); toast(`${n} added to the book`);
+  };
+
+  const clearSignature = async (id: string) => {
+    try {
+      const r = await fetch("/api/photos", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, slug, pin }) });
+      if (!r.ok) throw new Error((await r.json()).error || "failed");
+      toast("Signature cleared. The portrait is back in the grid, unsigned.");
+    } catch (e: any) { toast(e.message); } finally { setConfirmSigned(null); }
   };
 
   const removePhoto = async (id: string) => {
@@ -121,9 +130,18 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
           <p>{signed.length ? `${signed.length} ${signed.length === 1 ? "guest has" : "guests have"} written a note. Newest first; tap one to see it large.` : "Nothing signed yet. Signed portraits appear here the moment a guest taps Save."}</p>
           <div className="signed-list">
             {signed.map((p) => (
-              <figure key={p.id} onClick={() => setLightbox(p)}>
-                <img src={fileUrl(p.signed_path)!} alt={p.guest_name ? `Signed by ${p.guest_name}` : "Signed portrait"} loading="lazy" />
+              <figure key={p.id}>
+                <img src={fileUrl(p.signed_path)!} alt="Signed portrait" loading="lazy" onClick={() => setLightbox(p)} />
                 <figcaption><b>Signed</b><span>{p.signed_at ? new Date(p.signed_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></figcaption>
+                {confirmSigned === p.id ? (
+                  <div className="row sig-actions">
+                    <button className="tbtn" onClick={() => clearSignature(p.id)}>Clear note</button>
+                    <button className="tbtn danger" onClick={() => removePhoto(p.id)}>Delete photo</button>
+                    <button className="tbtn" onClick={() => setConfirmSigned(null)}>Keep</button>
+                  </div>
+                ) : (
+                  <button className="tile-x" aria-label="Remove" onClick={() => setConfirmSigned(p.id)}>×</button>
+                )}
               </figure>
             ))}
           </div>
