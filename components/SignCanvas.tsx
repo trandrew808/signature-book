@@ -137,13 +137,13 @@ export default function SignCanvas({ src, onClose, onSave }:
   const paintedRef = useRef(0);      // index of the last point already painted on the live stroke
   const rafRef = useRef<number | null>(null);
 
-  const toBase = (e: PointerEvent): Pt => {
+  // One point from a Touch (iPadOS reports the Pencil as touchType "stylus" with force) or a mouse event.
+  const ptFrom = (x: number, y: number, force: number, stylus: boolean): Pt => {
     const g = geoRef.current!;
-    // pressure can read 0 on the first samples of a quick Pencil stroke; treat that as a light touch, not "not drawing"
-    const p = e.pointerType === "pen" ? (e.pressure > 0.02 ? e.pressure : 0.25) : 0.5;
-    return { x: (e.clientX - g.left) * g.k, y: (e.clientY - g.top) * g.k, p };
+    // the Pencil's first samples can report 0 force; treat that as a light touch, not "not drawing"
+    const p = stylus ? (force > 0.02 ? Math.min(1, force) : 0.25) : 0.5;
+    return { x: (x - g.left) * g.k, y: (y - g.top) * g.k, p };
   };
-  const hovering = (e: PointerEvent) => e.pointerType === "pen" && e.buttons === 0 && e.pressure === 0 && e.type !== "pointerdown";
 
   // Paint whatever arrived since the last frame, once per frame.
   const paint = () => {
@@ -158,45 +158,67 @@ export default function SignCanvas({ src, onClose, onSave }:
 
   useEffect(() => {
     const c = inkRef.current; if (!c) return;
-    const activeId = { current: -1 };
-    const down = (e: PointerEvent) => {
+    // Raw touch events, not pointer events: calling preventDefault on touchstart is the one signal that
+    // makes Safari hand every sample to the page and run none of its own Pencil/text gestures.
+    // The active stroke follows one touch identifier. A stylus touch always wins over a finger, so a
+    // resting palm never blocks the pen.
+    let activeId: number | null = null; let activeStylus = false;
+    const isStylus = (t: Touch) => (t as any).touchType === "stylus";
+    const begin = (t: Touch, stylus: boolean) => {
       if (!baseRef.current) return;
-      if (e.pointerType === "touch" && liveRef.current && activeId.current !== -1) return; // palm while the pen is down
-      e.preventDefault();
-      // Register the stroke BEFORE anything else: setPointerCapture can synchronously flush queued
-      // moves on iPadOS, and if the stroke doesn't exist yet those samples (the whole start of a quick
-      // letter) are lost.
       const r = c.getBoundingClientRect(); geoRef.current = { left: r.left, top: r.top, k: baseRef.current.width / r.width };
-      liveRef.current = { ink, size, pts: [toBase(e)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0;
-      activeId.current = e.pointerId; strokeT0.current = performance.now(); moveEvents.current = 0;
+      liveRef.current = { ink, size, pts: [ptFrom(t.clientX, t.clientY, (t as any).force ?? 0, stylus)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0;
+      activeId = t.identifier; activeStylus = stylus; strokeT0.current = performance.now(); moveEvents.current = 0;
       const ctx = c.getContext("2d", { desynchronized: true } as any) as CanvasRenderingContext2D; const sc = c.width / baseRef.current.width; const p = liveRef.current.pts[0];
       ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(p.x * sc, p.y * sc, widthFor(p.p, size) * sc / 2, 0, Math.PI * 2); ctx.fill();
-      try { c.setPointerCapture(e.pointerId); } catch {}
     };
-    const move = (e: PointerEvent) => {
-      const live = liveRef.current; if (!live || e.pointerId !== activeId.current) return;
-      if (hovering(e)) return;
-      moveEvents.current++;
-      const co: PointerEvent[] = (e as any).getCoalescedEvents ? (e as any).getCoalescedEvents() : [];
-      if (co && co.length) for (const ev of co) live.pts.push(toBase(ev)); else live.pts.push(toBase(e));
-      schedule();
-    };
-    const up = (e: PointerEvent) => {
-      const live = liveRef.current; if (!live || e.pointerId !== activeId.current) return;
-      if (e.type === "pointerup" && e.clientX && geoRef.current) live.pts.push(toBase(e));
+    const finish = (label: string) => {
+      const live = liveRef.current; if (!live) return;
       paint();
       if (debugOn) {
         const ms = Math.max(1, performance.now() - strokeT0.current); const n = live.pts.length;
         const ps = live.pts.map((q) => q.p); const pmin = Math.min(...ps).toFixed(2), pmax = Math.max(...ps).toFixed(2);
-        setDbg(`${e.pointerType} · ${n} pts in ${Math.round(ms)}ms (${Math.round(n / ms * 1000)}/s, ${moveEvents.current} events) · pressure ${pmin}–${pmax} · dpr ${window.devicePixelRatio} · canvas ${c.width}×${c.height}`);
+        setDbg(`${label} · ${n} pts in ${Math.round(ms)}ms (${Math.round(n / ms * 1000)}/s, ${moveEvents.current} events) · pressure ${pmin}–${pmax} · dpr ${window.devicePixelRatio} · canvas ${c.width}×${c.height}`);
       }
-      liveRef.current = null; activeId.current = -1;
+      liveRef.current = null; activeId = null; activeStylus = false;
     };
-    // The whole document hears up/cancel, so a stroke ends even if the pointer escapes the canvas.
-    const docUp = (e: PointerEvent) => { if (activeId.current !== -1 && e.pointerId === activeId.current) up(e); };
-    document.addEventListener("pointerup", docUp); document.addEventListener("pointercancel", docUp);
-    c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move);
-    return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); document.removeEventListener("pointerup", docUp); document.removeEventListener("pointercancel", docUp); if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
+    const onStart = (e: TouchEvent) => {
+      e.preventDefault();
+      for (const t of Array.from(e.changedTouches)) {
+        const stylus = isStylus(t);
+        if (activeId === null) { begin(t, stylus); continue; }
+        // a stylus arriving while a finger/palm stroke is active takes over
+        if (stylus && !activeStylus) { strokesRef.current.pop(); liveRef.current = null; begin(t, true); }
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const live = liveRef.current; if (!live || activeId === null) return;
+      let t: Touch | null = null; for (const x of Array.from(e.changedTouches)) if (x.identifier === activeId) t = x;
+      if (!t) return;
+      moveEvents.current++;
+      live.pts.push(ptFrom(t.clientX, t.clientY, (t as any).force ?? 0, activeStylus));
+      schedule();
+    };
+    const onEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      for (const t of Array.from(e.changedTouches)) if (t.identifier === activeId) {
+        if (liveRef.current && geoRef.current) liveRef.current.pts.push(ptFrom(t.clientX, t.clientY, (t as any).force ?? 0, activeStylus));
+        finish(activeStylus ? "pen" : "touch");
+      }
+    };
+    // Mouse fallback for desktop testing
+    const mDown = (e: MouseEvent) => { if (e.button !== 0 || !baseRef.current) return; const r = c.getBoundingClientRect(); geoRef.current = { left: r.left, top: r.top, k: baseRef.current.width / r.width }; liveRef.current = { ink, size, pts: [ptFrom(e.clientX, e.clientY, 0.5, false)] }; strokesRef.current.push(liveRef.current); paintedRef.current = 0; activeId = -2; strokeT0.current = performance.now(); moveEvents.current = 0; };
+    const mMove = (e: MouseEvent) => { if (activeId !== -2 || !liveRef.current) return; liveRef.current.pts.push(ptFrom(e.clientX, e.clientY, 0.5, false)); schedule(); };
+    const mUp = () => { if (activeId === -2) finish("mouse"); };
+    const opts = { passive: false } as AddEventListenerOptions;
+    c.addEventListener("touchstart", onStart, opts); c.addEventListener("touchmove", onMove, opts); c.addEventListener("touchend", onEnd, opts); c.addEventListener("touchcancel", onEnd, opts);
+    c.addEventListener("mousedown", mDown); window.addEventListener("mousemove", mMove); window.addEventListener("mouseup", mUp);
+    return () => {
+      c.removeEventListener("touchstart", onStart); c.removeEventListener("touchmove", onMove); c.removeEventListener("touchend", onEnd); c.removeEventListener("touchcancel", onEnd);
+      c.removeEventListener("mousedown", mDown); window.removeEventListener("mousemove", mMove); window.removeEventListener("mouseup", mUp);
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ink, size, loaded]);
 
@@ -229,7 +251,7 @@ export default function SignCanvas({ src, onClose, onSave }:
       <div className="stage" ref={stageRef}>
         <div className={"frame" + (frame === "print" ? " paper" : "")} ref={frameRef}>
           <canvas ref={photoRef} aria-hidden="true" />
-          <canvas ref={inkRef} className="ink" role="img" aria-label="Writing surface" {...({ inputMode: "none", contentEditable: false, "data-scribble": "false" } as any)} />
+          <canvas ref={inkRef} className="ink" role="img" aria-label="Writing surface" />
         </div>
       </div>
       <div className="tools">
