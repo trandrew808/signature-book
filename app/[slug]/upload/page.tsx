@@ -4,6 +4,7 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 const RELEASES = "https://github.com/trandrew808/signature-book/releases/latest/download";
 const UPLOADER_ARM = `${RELEASES}/Booth-Uploader-arm64.zip`;
 const UPLOADER_X64 = `${RELEASES}/Booth-Uploader-x64.zip`;
+const QUARANTINE_CMD = 'xattr -dr com.apple.quarantine "/Applications/Booth Uploader.app"';
 import { useEvent } from "@/lib/useEvent";
 import { fileUrl, PhotoRow } from "@/lib/supabase";
 
@@ -101,7 +102,7 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
   };
 
   return (
-    <div className="page">
+    <div className="page selectable">
       <div className="bar">
         <div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge" /><span className="brand-sub">Signature Book</span></div>
         <div className="right"><span>{event?.title}</span><a className="tbtn" href={`/${slug}`} target="_blank" rel="noreferrer">Open iPad view</a></div>
@@ -185,7 +186,7 @@ export default function UploadPage({ params }: { params: Promise<{ slug: string 
           </div>
           <ol className="steps" style={{ marginTop: 14 }}>
             <li><div><b>Install</b><small>Unzip, drag <b>Booth Uploader</b> to Applications and open it. Not sure which chip?  → About This Mac: "Apple M…" is Apple Silicon, "Intel" is Intel.</small></div></li>
-            <li><div><b>First launch only</b><small>macOS says it can't verify the app. Click <b>Done</b> (not Move to Trash), then System Settings → Privacy &amp; Security → scroll down → <b>Open Anyway</b>. If that button never appears, in Terminal: <code>xattr -dr com.apple.quarantine "/Applications/Booth Uploader.app"</code></small></div></li>
+            <li><div><b>First launch only</b><small>macOS says it can't verify the app. Click <b>Done</b> (not Move to Trash), then System Settings → Privacy &amp; Security → scroll down → <b>Open Anyway</b>. If that button never appears, paste this in Terminal:<span className="cmd"><code>{QUARANTINE_CMD}</code><button className="tbtn" onClick={() => copy(QUARANTINE_CMD, "Terminal command")}>Copy</button></span></small></div></li>
             <li><div><b>Set up this event</b><small>Click the camera icon in the menu bar → <b>Set up event…</b> → paste the link and PIN above, type the couple's names, <b>Choose…</b> a fresh folder for tonight → <b>Start watching</b>.</small></div></li>
             <li><div><b>Export into that folder</b><small>Lightroom preset "Photo Lounge Booth": JPEG, sRGB, 2500px long edge, quality 85. Everything that lands in the folder is uploaded, so keep it to tonight's lounge photos.</small></div></li>
           </ol>

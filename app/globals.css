@@ -164,3 +164,9 @@ h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;l
 @media (prefers-reduced-motion: reduce){.show-fig{animation:none}}
 
 .dbg{position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:70;font:12px/1.4 ui-monospace,Menlo,monospace;background:rgba(0,0,0,.75);color:#9f9;padding:6px 8px;border-radius:4px;pointer-events:none;max-width:95vw}
+
+/* editor + admin pages: normal text selection so instructions can be copied */
+.selectable,.selectable *{-webkit-user-select:text;user-select:text}
+.selectable button,.selectable .tbtn,.selectable .tile-x{-webkit-user-select:none;user-select:none}
+.cmd{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.cmd code{font-size:12px;padding:6px 8px;background:var(--bg);border:1px solid var(--line);overflow-wrap:anywhere}

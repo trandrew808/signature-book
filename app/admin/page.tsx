@@ -111,7 +111,7 @@ export default function AdminPage() {
 
   if (!unlocked) {
     return (
-      <div className="page">
+      <div className="page selectable">
         <div className="bar"><div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge" /><span className="brand-sub">Admin</span></div></div>
         <form className="pin-gate" onSubmit={unlock}>
           <h2>Admin PIN</h2>
@@ -124,7 +124,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page selectable">
       <div className="bar"><div className="brand"><img className="logo" src="/logo.png" alt="Photo Lounge" /><span className="brand-sub">Admin</span></div>
         <div className="right"><span className="stat">{events.length} {events.length === 1 ? "event" : "events"}</span></div></div>
       <div className="wrap" style={{ maxWidth: 1000, margin: "0 auto", width: "100%" }}>
