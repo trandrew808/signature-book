@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 const RELEASES = "https://github.com/trandrew808/signature-book/releases/latest/download";
 const UPLOADER_ARM = `${RELEASES}/Booth-Uploader-arm64.zip`;
 const UPLOADER_X64 = `${RELEASES}/Booth-Uploader-x64.zip`;
-const QUARANTINE_CMD = 'xattr -dr com.apple.quarantine "/Applications/Booth Uploader.app"';
+const QUARANTINE_CMD = "xattr -dr com.apple.quarantine /Applications/Booth\\ Uploader.app";
 import { useEvent } from "@/lib/useEvent";
 import { fileUrl, PhotoRow } from "@/lib/supabase";
 
