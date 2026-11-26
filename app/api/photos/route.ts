@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { actorFrom, canManageStudio } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+/** Admin PIN header, a signed-in member of the event's studio, or the event's editor PIN (slug + pin in the body). */
 async function authorize(req: Request, db: ReturnType<typeof supabaseAdmin>, photoEventId: string, slug?: string, pin?: string) {
-  const adminOk = !!process.env.ADMIN_PIN && req.headers.get("x-admin-pin") === process.env.ADMIN_PIN;
-  if (adminOk) return true;
-  if (!slug || !pin) return false;
-  const { data: ev } = await db.from("events").select("id, editor_pin").eq("slug", slug).single();
-  return !!ev && ev.id === photoEventId && ev.editor_pin === pin;
+  const { data: ev } = await db.from("events").select("id, editor_pin, studio_id").eq("slug", slug || "").maybeSingle();
+  if (slug && pin && ev && ev.id === photoEventId && ev.editor_pin === pin) return true;
+  const actor = await actorFrom(req);
+  if (!actor) return false;
+  if (actor.kind === "admin") return true;
+  const { data: owner } = await db.from("events").select("studio_id").eq("id", photoEventId).single();
+  return canManageStudio(actor, owner?.studio_id);
 }
 
 /** Clear a photo's signature (keeps the original so it can be signed again). JSON: { id, slug?, pin? } */
@@ -38,13 +42,7 @@ export async function DELETE(req: Request) {
   const { data: p } = await db.from("photos").select("event_id, original_path, signed_path, layer_path").eq("id", id).single();
   if (!p) return NextResponse.json({ error: "Photo not found" }, { status: 404 });
 
-  const adminOk = !!process.env.ADMIN_PIN && req.headers.get("x-admin-pin") === process.env.ADMIN_PIN;
-  let editorOk = false;
-  if (!adminOk && slug && pin) {
-    const { data: ev } = await db.from("events").select("id, editor_pin").eq("slug", slug).single();
-    editorOk = !!ev && ev.id === p.event_id && ev.editor_pin === pin;
-  }
-  if (!adminOk && !editorOk) return NextResponse.json({ error: "Wrong PIN" }, { status: 403 });
+  if (!(await authorize(req, db, p.event_id, slug, pin))) return NextResponse.json({ error: "Wrong PIN" }, { status: 403 });
 
   const paths = [p.original_path, p.signed_path, p.layer_path].filter(Boolean) as string[];
   if (paths.length) await db.storage.from("booth").remove(paths);
